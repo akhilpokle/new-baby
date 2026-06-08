@@ -1,0 +1,78 @@
+/* Design tokens — swap these for DLS variables during Liferay handoff */
+:root {
+
+	/* Colors */
+	--color-bg:           #f5f5f5;
+	--color-surface:      #ffffff;
+	--color-text:         #1a1a1a;
+	--color-text-muted:   #6b6b6b;
+	--color-primary:      #c00000; /* placeholder — awaiting Figma value */
+	--color-accent:       #e87722; /* placeholder — awaiting Figma value */
+	--color-border:       #e0e0e0;
+
+	/* Border radii */
+	--radius-sm:          4px;
+	--radius-md:          8px;
+	--radius-lg:          16px;
+
+	/* Spacing scale (base 4px) */
+	--space-1:            4px;
+	--space-2:            8px;
+	--space-3:            12px;
+	--space-4:            16px;
+	--space-5:            24px;
+	--space-6:            32px;
+	--space-7:            48px;
+	--space-8:            64px;
+
+	/* Font sizes */
+	--font-size-xs:       0.75rem;   /* 12px */
+	--font-size-sm:       0.875rem;  /* 14px */
+	--font-size-md:       1rem;      /* 16px */
+	--font-size-lg:       1.125rem;  /* 18px */
+	--font-size-xl:       1.25rem;   /* 20px */
+	--font-size-2xl:      1.5rem;    /* 24px */
+
+	/* Line heights */
+	--line-height-tight:  1.2;
+	--line-height-snug:   1.4;
+	--line-height-normal: 1.6;
+	--line-height-loose:  1.8;
+
+	/* Scene — sky gradient (from Figma) */
+	--color-sky-top:         #a0dbff;
+	--color-sky-bottom:      #eff9ff;
+
+	/* Scene — interaction tuning (JS reads these at init) */
+	--scene-scale-min:       0.35;
+	--scene-scale-max:       1.6;
+	--ease-factor:           0.055;
+	--delivery-zone-px:      40;
+	--sprite-fps:            10;
+
+	/* Scene — sparkle trail */
+	--color-sparkle:         #F5A623;
+	--sparkle-duration:      600ms;
+
+	/* Scene — cloud drift */
+	--cloud-drift-duration:  24s;
+
+	/* Scene — door pulse hint */
+	--pulse-color:           rgba(200, 0, 0, 0.55);
+	--pulse-duration:        3s;
+
+	/* Scene — horizontal offset so the door sits at stage centre (x=683).
+	   Recalculate if scene.svg changes:
+	     rendered_w = 6068 × (580 / 645) ≈ 5457px
+	     door_rendered_x = door_svg_cx × (580 / 645)
+	     --scene-x-offset = 683 − door_rendered_x
+	   Current door SVG centre x ≈ 2441 → offset = 683 − 2194 = −1511px */
+	--scene-x-offset:        -1511px;
+
+	/* Scene — zoom transform-origin (stage px coords)
+	   x=683 = stage centre = door position after offset is applied.
+	   y=768 = bottom of stage = ground level.
+	   At any scale: door stays centred, ground stays pinned to screen bottom. */
+	--door-origin-x:         683px;
+	--door-origin-y:         768px;
+}

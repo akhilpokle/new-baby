@@ -1,0 +1,281 @@
+/* Global reset */
+*, *::before, *::after {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+}
+
+img {
+	display: block;
+}
+
+/* Visible focus state for keyboard navigation */
+:focus-visible {
+	outline: 2px solid var(--color-primary);
+	outline-offset: 2px;
+}
+
+/* ─── Body ────────────────────────────────────────────────────────────────── */
+/* Sky gradient fills any letterbox area outside the stage */
+body {
+	font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+	font-size: var(--font-size-md);
+	line-height: var(--line-height-normal);
+	color: var(--color-text);
+	background: linear-gradient(to bottom, var(--color-sky-top), var(--color-sky-bottom));
+	min-height: 100vh;
+	overflow: hidden;
+}
+
+/* ─── Stage ───────────────────────────────────────────────────────────────── */
+/* Fixed 1366×768 coordinate space. JS scaleStage() applies
+   translate(x,y) scale(ratio) from top-left origin to fit the viewport —
+   all child px values remain in the 1366×768 system and scale together. */
+.stage {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 1366px;
+	height: 768px;
+	overflow: hidden;
+	transform-origin: top left;
+}
+
+/* ─── Sky ─────────────────────────────────────────────────────────────────── */
+.sky {
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(to bottom, var(--color-sky-top), var(--color-sky-bottom));
+	z-index: 0;
+}
+
+/* ─── Scene layer ─────────────────────────────────────────────────────────── */
+/* Full-stage overlay; the inline SVG sits right+bottom inside it.
+   JS drives transform: scale(s) here — transform-origin anchors
+   the scale to the door position so the door stays fixed on screen. */
+.scene-layer {
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	transform-origin: var(--door-origin-x) var(--door-origin-y);
+	will-change: transform;
+}
+
+/* Panoramic inline SVG — both dimensions must be explicit (width:auto doesn't
+   work for inline SVG the way it does for <img>).
+   width = 6068 × (580 / 645) = 5457px preserves the viewBox aspect ratio.
+   left = --scene-x-offset pins the door to stage x=683. */
+.scene-img {
+	position: absolute;
+	height: 580px;
+	width: 5457px;
+	bottom: 0;
+	left: var(--scene-x-offset);
+	display: block;
+	overflow: visible;
+}
+
+/* ─── Cloud layer ─────────────────────────────────────────────────────────── */
+/* z-index 0: above sky (same z, later in DOM) but BELOW scene-layer (z-index 1)
+   so clouds sit behind the house.
+   JS drives transform: scale(s) at 50% of scene scale delta — parallax depth.
+   transform-origin top-centre so clouds expand away from the sky, not the ground. */
+.clouds-layer {
+	position: absolute;
+	inset: 0;
+	z-index: 0;
+	pointer-events: none;
+	transform-origin: 683px 0px;
+	will-change: transform;
+}
+
+/* Per-cloud position and size come from inline CSS custom properties.
+   Negative animation-delay starts each cloud mid-cycle for instant stagger. */
+.cloud {
+	position: absolute;
+	left: var(--cloud-x);
+	top: var(--cloud-y);
+	width: var(--cloud-w);
+	height: auto;
+	animation: cloud-drift var(--cloud-drift-duration) ease-in-out infinite;
+	animation-delay: var(--cloud-delay, 0s);
+}
+
+@keyframes cloud-drift {
+	0%, 100% { transform: translateX(0); }
+	50%       { transform: translateX(12px); }
+}
+
+/* ─── Sparkle container ───────────────────────────────────────────────────── */
+/* JS spawns .sparkle children here; sits above scene, below stork. */
+.sparkle-container {
+	position: absolute;
+	inset: 0;
+	z-index: 3;
+	pointer-events: none;
+	overflow: hidden;
+}
+
+/* Single sparkle particle. JS sets `left` and `top` to trail position.
+   clip-path draws a 4-point star. */
+.sparkle {
+	position: absolute;
+	width: 10px;
+	height: 10px;
+	background: var(--color-sparkle);
+	clip-path: polygon(
+		50% 0%,   61% 35%,  98% 35%, 68% 57%,
+		79% 91%,  50% 70%,  21% 91%, 32% 57%,
+		2%  35%,  39% 35%
+	);
+	transform: translate(-50%, -50%) scale(1);
+	pointer-events: none;
+	animation: sparkle-fade var(--sparkle-duration) ease-out forwards;
+}
+
+@keyframes sparkle-fade {
+	0%   { transform: translate(-50%, -50%) scale(1);   opacity: 1; }
+	100% { transform: translate(-50%, -50%) scale(0.2); opacity: 0; }
+}
+
+/* ─── Stork ───────────────────────────────────────────────────────────────── */
+/* Zero-size anchor at stork's center point.
+   JS sets: transform: translate(x, y) rotate(deg) scaleX(flip)
+   Rotation on the wrapper, frame-swap on the inner img — kept separate
+   per spec so sprite cycle and directional tilt don't interfere. */
+.stork-wrapper {
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 0;
+	height: 0;
+	z-index: 4;
+	pointer-events: none;
+	will-change: transform;
+}
+
+/* Beak-anchored: left/top offset so the beak tip sits at the wrapper's (0,0)
+   origin. scaleX(-1) flips body/wings around that same origin so the beak
+   stays on the cursor in both flight directions. */
+.stork-frame {
+	position: absolute;
+	display: block;
+	width: 227px;
+	height: 173px;
+	left: -30px;
+	top: -91px;
+}
+
+/* ─── Door pulse ──────────────────────────────────────────────────────────── */
+/* Lives inside .scene-layer so it zooms/pans with the scene.
+   Positioned at the door's unscaled scene-layer coordinates:
+     left = door_cx(683) − half_w(41) = 642px
+     top  = door rendered top ≈ 596px   (SVG y=454 × scale 580/645)
+   CSS animation scales the border outward and fades — no JS needed. */
+.door-pulse {
+	position: absolute;
+	left: 642px;
+	top: 596px;
+	width: 82px;
+	height: 105px;
+	border: 2px solid var(--pulse-color);
+	border-radius: 3px;
+	pointer-events: none;
+	transform-origin: center center;
+	animation: door-pulse var(--pulse-duration) ease-out infinite;
+}
+
+@keyframes door-pulse {
+	0%   { transform: scale(1);   opacity: 1; }
+	100% { transform: scale(2.6); opacity: 0; }
+}
+
+/* ─── Custom cursor ───────────────────────────────────────────────────────── */
+/* OS pointer hidden; a right-pointing triangle follows the mouse and rotates
+   to face the door. JS sets transform: translate(x,y) rotate(deg). */
+html { cursor: none; }
+
+.cursor-arrow {
+	position: fixed;
+	left: 0;
+	top: 0;
+	width: 0;
+	height: 0;
+	z-index: 9999;
+	pointer-events: none;
+	will-change: transform;
+}
+
+/* PNG arrow image — right-pointing, tip at far right.
+   Base (left edge) sits at the mouse position; tip extends toward the door.
+   Dimensions should match the actual cursor-arrow.png pixel size. */
+.cursor-arrow::after {
+	content: '';
+	position: absolute;
+	left: 0;
+	top: -16px;          /* −(height / 2) = −16 centres the 32px image on the origin */
+	width: 32px;
+	height: 32px;
+	background: url('../img/cursor-arrow.png') no-repeat center / contain;
+	/* outline disabled — drop-shadow on a moving fixed element causes compositor lag
+	filter:
+		drop-shadow( 1px  0px 0 #000)
+		drop-shadow(-1px  0px 0 #000)
+		drop-shadow( 0px  1px 0 #000)
+		drop-shadow( 0px -1px 0 #000)
+		drop-shadow(0 2px 3px rgba(0, 0, 0, 0.30)); */
+}
+
+/* ─── Speech bubble ───────────────────────────────────────────────────────── */
+/* Absolute inside .stage (sibling of .stork-wrapper, NOT a child).
+   JS updates transform: translate(storkX, storkY) each rAF frame so it
+   follows the stork. Fades in after 2 s of mouse inactivity. */
+.speech-bubble {
+	position: absolute;
+	left: 0;
+	top: 0;
+	background: #ffffff;
+	color: var(--color-text);
+	font-size: 13px;
+	line-height: 1.4;
+	padding: 7px 13px;
+	border-radius: 14px;
+	white-space: nowrap;
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+	pointer-events: none;
+	z-index: 6;
+	opacity: 0;
+	transition: opacity 0.3s ease;
+	will-change: transform, opacity;
+}
+
+.speech-bubble.is-visible {
+	opacity: 1;
+}
+
+/* Downward-pointing tail aligned to left third of bubble */
+.speech-bubble::after {
+	content: '';
+	position: absolute;
+	bottom: -7px;
+	left: 20px;
+	width: 0;
+	height: 0;
+	border-left: 7px solid transparent;
+	border-right: 7px solid transparent;
+	border-top: 7px solid #ffffff;
+}
+
+/* ─── Reduced motion ──────────────────────────────────────────────────────── */
+/* Keep follow + zoom (core to the experience); pause decorative animation. */
+@media (prefers-reduced-motion: reduce) {
+	.cloud {
+		animation: none;
+	}
+	.sparkle {
+		animation-duration: 200ms;
+	}
+	.door-pulse {
+		animation: none;
+	}
+}
