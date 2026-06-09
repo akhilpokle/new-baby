@@ -235,6 +235,46 @@ html { cursor: none; }
 	border-top: 7px solid #ffffff;
 }
 
+/* ─── Loader overlay ──────────────────────────────────────────────────────── */
+/* Matches the sky gradient so the reveal feels seamless.
+   JS adds .is-hidden once all flight frames are decoded + 800ms min delay. */
+.loader-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 10000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: linear-gradient(to bottom, var(--color-sky-top), var(--color-sky-bottom));
+	opacity: 1;
+	transition: opacity 0.5s ease;
+}
+
+.loader-overlay.is-hidden {
+	opacity: 0;
+	pointer-events: none;
+}
+
+.loader-text {
+	font-size: var(--font-size-xl);
+	color: var(--color-text-muted);
+	letter-spacing: 0.01em;
+}
+
+/* Three dots blink in sequence — each offset by 200ms */
+.loader-dot {
+	opacity: 0;
+	animation: loader-dot-blink 1.4s ease-in-out infinite;
+}
+.loader-dot:nth-child(1) { animation-delay: 0s;    }
+.loader-dot:nth-child(2) { animation-delay: 0.2s;  }
+.loader-dot:nth-child(3) { animation-delay: 0.4s;  }
+
+@keyframes loader-dot-blink {
+	0%, 80%, 100% { opacity: 0; }
+	40%           { opacity: 1; }
+}
+
 /* ─── Reduced motion ──────────────────────────────────────────────────────── */
 /* Keep follow + zoom (core to the experience); pause decorative animation. */
 @media (prefers-reduced-motion: reduce) {

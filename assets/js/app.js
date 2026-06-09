@@ -91,13 +91,23 @@ const preloaded = FRAMES.map(src => {
   return img;
 });
 
-Promise.all(preloaded.map(img => img.decode().catch(() => {})))
-  .finally(() => {
-    setInterval(() => {
-      frameIndex = (frameIndex + 1) % FRAMES.length;
-      storkFrame.src = FRAMES[frameIndex];
-    }, Math.round(1000 / spriteFps));
-  });
+const loaderEl  = document.querySelector('[data-loader]');
+const minDelay  = new Promise(resolve => setTimeout(resolve, 800));
+
+Promise.all([
+  ...preloaded.map(img => img.decode().catch(() => {})),
+  minDelay,
+]).finally(() => {
+  // Fade out loader
+  loaderEl.classList.add('is-hidden');
+  loaderEl.addEventListener('transitionend', () => loaderEl.remove(), { once: true });
+
+  // Start wing animation now that all frames are cached
+  setInterval(() => {
+    frameIndex = (frameIndex + 1) % FRAMES.length;
+    storkFrame.src = FRAMES[frameIndex];
+  }, Math.round(1000 / spriteFps));
+});
 
 // ── Step 7: Stork cursor follow ───────────────────────────────────────────────
 
