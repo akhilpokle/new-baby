@@ -160,6 +160,10 @@ const MAX_DIST = Math.hypot(DOOR_X, DOOR_Y);
 let currentSceneScale = SCALE_MIN;
 let targetSceneScale  = SCALE_MIN;
 
+// Blind has its own lerp state — independent of scene zoom so it can
+// target cursor position directly and animate at its own (faster) speed.
+let currentBlindProgress = 0;  // 0 = fully closed (slats tall), 1 = fully open (slats 1px)
+
 // smoothstep: smooth S-curve easing for the distance → scale mapping
 function smoothstep(t) {
   t = Math.max(0, Math.min(1, t));
@@ -231,17 +235,19 @@ function loop(now) {
   cloudsLayer.style.opacity = 1 - fadeFraction * 0.5;  // 1.0 → 0.5
 
   // — Binder / blind animation —
-  // Far from door: slats at BLIND_CLOSED_SCALE (fills window opening, y=415→480).
-  // Near door: slats collapse quickly to 1 (native 1px SVG height).
-  // Cubic easing (t³) keeps slats solid through most of the approach, then
-  // snaps them to 1px rapidly in the final stretch — the "very quick" collapse.
-  const BLIND_CLOSED_SCALE  = 65;   // 65 × 1px native = 65px, fills SVG window y=415–480
-  const BLIND_OPEN_THRESHOLD = 0.65; // scene scale at which collapse begins
-  const blindRaw      = (currentSceneScale - BLIND_OPEN_THRESHOLD) / (SCALE_MAX - BLIND_OPEN_THRESHOLD);
-  const tBlind        = Math.max(0, Math.min(1, blindRaw));
-  const blindProgress = tBlind * tBlind * tBlind;  // cubic: slow start, fast snap at the door
-  // Lerp: BLIND_CLOSED_SCALE (far) → 1 (near)
-  const slatScaleY  = 1 + (BLIND_CLOSED_SCALE - 1) * (1 - blindProgress);
+  // Target is derived from targetSceneScale (direct cursor position, no scene-zoom lag)
+  // so the blind fully collapses the moment the cursor reaches the door.
+  // currentBlindProgress lerps toward the target at BLIND_LERP (≈2.5× faster than
+  // the scene zoom) so users can see the slats rising — quick but perceptible.
+  const BLIND_CLOSED_SCALE   = 65;   // 65 × 1px native = 65px, fills SVG window y=415–480
+  const BLIND_OPEN_THRESHOLD = 0.65; // targetSceneScale value at which collapse begins
+  const BLIND_LERP           = 0.14; // lerp speed: ~250ms to fully open at 60fps
+  const blindRaw         = (targetSceneScale - BLIND_OPEN_THRESHOLD) / (SCALE_MAX - BLIND_OPEN_THRESHOLD);
+  const tBlind           = Math.max(0, Math.min(1, blindRaw));
+  const targetBlindProgress = tBlind * tBlind * tBlind;  // cubic: slow start, fast snap
+  currentBlindProgress  += (targetBlindProgress - currentBlindProgress) * BLIND_LERP;
+  // Lerp: BLIND_CLOSED_SCALE (progress=0) → 1 (progress=1)
+  const slatScaleY = 1 + (BLIND_CLOSED_SCALE - 1) * (1 - currentBlindProgress);
   binderEls.forEach(({ el, yTop }) => {
     if (!el) return;
     // translate-scale-translate keeps the collapse anchored to the slat's top edge

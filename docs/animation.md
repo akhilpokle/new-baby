@@ -130,20 +130,32 @@ These are y-coordinates in the **original SVG viewBox** (0 0 6068 645):
 
 ### Scale range and easing
 
+The blind has **its own independent lerp state** (`currentBlindProgress`) separate
+from `currentSceneScale`. This lets it target cursor position directly (no scene-zoom
+lag) while still animating at its own speed.
+
 ```js
-const BLIND_CLOSED_SCALE   = 65;    // far: each 1px slat scales to 65px → fills SVG window y=415–480
-const BLIND_OPEN_THRESHOLD = 0.65;  // scene scale at which collapse begins
-const t            = Math.max(0, Math.min(1, blindRaw));
-const blindProgress = t * t * t;   // cubic ease-in: slow start, fast snap near door
-const slatScaleY   = 1 + (BLIND_CLOSED_SCALE - 1) * (1 - blindProgress);
+// Module level:
+let currentBlindProgress = 0;  // 0 = closed (tall slats), 1 = open (1px slats)
+
+// Inside rAF loop:
+const BLIND_CLOSED_SCALE   = 65;   // fills SVG window y=415–480
+const BLIND_OPEN_THRESHOLD = 0.65; // targetSceneScale at which collapse begins
+const BLIND_LERP           = 0.14; // ~2.5× faster than scene zoom (0.06)
+
+const blindRaw            = (targetSceneScale - BLIND_OPEN_THRESHOLD) / (SCALE_MAX - BLIND_OPEN_THRESHOLD);
+const tBlind              = Math.max(0, Math.min(1, blindRaw));
+const targetBlindProgress = tBlind * tBlind * tBlind;   // cubic: slow start, fast snap
+currentBlindProgress     += (targetBlindProgress - currentBlindProgress) * BLIND_LERP;
+const slatScaleY          = 1 + (BLIND_CLOSED_SCALE - 1) * (1 - currentBlindProgress);
 ```
 
-- **Far from door** (`blindProgress=0`): `slatScaleY=65` — slats fill the window opening (SVG y 415→480).
-- **Near door** (`blindProgress=1`): `slatScaleY=1` — slats at native 1px height.
-- Cubic easing keeps slats solid for most of the approach, then snaps them
-  to 1px rapidly in the final stretch.
-- No gap in either state: at scale=1 slats are 1px each, 1px apart (touching);
-  at scale>1 they overlap, filling the window solidly.
+- Uses `targetSceneScale` (not `currentSceneScale`) so the blind fully collapses
+  the moment the cursor reaches the door — not delayed by scene zoom lag.
+- `BLIND_LERP = 0.14` gives ~250ms visible travel at 60fps — quick but perceptible.
+- **Far from door** (`currentBlindProgress=0`): `slatScaleY=65` — slats fill window.
+- **Near door** (`currentBlindProgress=1`): `slatScaleY=1` — native 1px height.
+- No gap in either state: slats touch at scale=1, overlap at scale>1.
 
 ---
 
