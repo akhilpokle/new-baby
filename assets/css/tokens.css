@@ -50,10 +50,6 @@
 	--delivery-zone-px:      40;
 	--sprite-fps:            10;
 
-	/* Scene — sparkle trail */
-	--color-sparkle:         #F5A623;
-	--sparkle-duration:      600ms;
-
 	/* Scene — cloud drift */
 	--cloud-drift-duration:  24s;
 

@@ -106,37 +106,6 @@ body {
 	50%       { transform: translateX(12px); }
 }
 
-/* ─── Sparkle container ───────────────────────────────────────────────────── */
-/* JS spawns .sparkle children here; sits above scene, below stork. */
-.sparkle-container {
-	position: absolute;
-	inset: 0;
-	z-index: 3;
-	pointer-events: none;
-	overflow: hidden;
-}
-
-/* Single sparkle particle. JS sets `left` and `top` to trail position.
-   clip-path draws a 4-point star. */
-.sparkle {
-	position: absolute;
-	width: 10px;
-	height: 10px;
-	background: var(--color-sparkle);
-	clip-path: polygon(
-		50% 0%,   61% 35%,  98% 35%, 68% 57%,
-		79% 91%,  50% 70%,  21% 91%, 32% 57%,
-		2%  35%,  39% 35%
-	);
-	transform: translate(-50%, -50%) scale(1);
-	pointer-events: none;
-	animation: sparkle-fade var(--sparkle-duration) ease-out forwards;
-}
-
-@keyframes sparkle-fade {
-	0%   { transform: translate(-50%, -50%) scale(1);   opacity: 1; }
-	100% { transform: translate(-50%, -50%) scale(0.2); opacity: 0; }
-}
 
 /* ─── Stork ───────────────────────────────────────────────────────────────── */
 /* Zero-size anchor at stork's center point.

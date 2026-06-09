@@ -9,7 +9,6 @@ const sceneLayer   = document.querySelector('[data-scene-layer]');
 const cloudsLayer  = document.querySelector('[data-clouds-layer]');
 const storkEl      = document.querySelector('[data-stork]');
 const storkFrame   = document.querySelector('[data-stork-frame]');
-const sparkleCont  = document.querySelector('[data-sparkle-container]');
 const cursorEl     = document.querySelector('[data-cursor]');
 const speechBubble = document.querySelector('[data-speech-bubble]');
 
@@ -141,21 +140,6 @@ function smoothstep(t) {
   return t * t * (3 - 2 * t);
 }
 
-// ── Sparkle trail ─────────────────────────────────────────────────────────────
-const TRAIL_MAX      = 8;   // max positions kept in the queue
-const SPARKLE_MS     = 55;  // ms between particle spawns (≈18/s)
-const trail          = [];
-let   sparkleAccum   = 0;
-
-function spawnSparkle(x, y) {
-  const el = document.createElement('div');
-  el.className  = 'sparkle';
-  el.style.left = `${x}px`;
-  el.style.top  = `${y}px`;
-  sparkleCont.appendChild(el);
-  // Remove after CSS animation ends to keep the DOM clean
-  el.addEventListener('animationend', () => el.remove(), { once: true });
-}
 
 // ── rAF loop ──────────────────────────────────────────────────────────────────
 let lastTime = performance.now();
@@ -234,19 +218,6 @@ function loop(now) {
     el.setAttribute('transform',
       `translate(0,${yTop}) scale(1,${slatScaleY}) translate(0,${-yTop})`);
   });
-
-  // — Sparkle trail —
-  sparkleAccum += dt;
-  if (sparkleAccum >= SPARKLE_MS) {
-    sparkleAccum = 0;
-    trail.push({ x: storkX, y: storkY });
-    if (trail.length > TRAIL_MAX) trail.shift();
-    // Emit from the tail of the trail for a natural lag behind the stork
-    if (trail.length >= 3) {
-      const tail = trail[0];
-      spawnSparkle(tail.x, tail.y);
-    }
-  }
 
   requestAnimationFrame(loop);
 }
