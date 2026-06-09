@@ -67,6 +67,10 @@ window.addEventListener('resize', scaleStage);
 scaleStage();
 
 // ── Step 6: Sprite cycle ──────────────────────────────────────────────────────
+// All frames are preloaded into Image objects before animation starts.
+// Without preloading, each setInterval tick issues a new network request;
+// on a remote host (e.g. GitHub Pages) the response takes longer than the
+// interval, so the browser cancels every request and no frame ever renders.
 const FRAMES = [
   'assets/img/FLIGHT.png',
   'assets/img/FLIGHT-1.png',
@@ -78,10 +82,22 @@ const FRAMES = [
 
 let frameIndex = 0;
 
-setInterval(() => {
-  frameIndex = (frameIndex + 1) % FRAMES.length;
-  storkFrame.src = FRAMES[frameIndex];
-}, Math.round(1000 / spriteFps));
+// Preload — create one Image per frame and wait for all to decode.
+// The interval only starts once every image is in the browser cache,
+// so src swaps are instant regardless of network latency.
+const preloaded = FRAMES.map(src => {
+  const img = new Image();
+  img.src = src;
+  return img;
+});
+
+Promise.all(preloaded.map(img => img.decode().catch(() => {})))
+  .finally(() => {
+    setInterval(() => {
+      frameIndex = (frameIndex + 1) % FRAMES.length;
+      storkFrame.src = FRAMES[frameIndex];
+    }, Math.round(1000 / spriteFps));
+  });
 
 // ── Step 7: Stork cursor follow ───────────────────────────────────────────────
 
