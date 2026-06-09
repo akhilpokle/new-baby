@@ -135,28 +135,20 @@ body {
 	top: -91px;
 }
 
-/* ─── Door pulse ──────────────────────────────────────────────────────────── */
-/* Lives inside .scene-layer so it zooms/pans with the scene.
-   Positioned at the door's unscaled scene-layer coordinates:
-     left = door_cx(683) − half_w(41) = 642px
-     top  = door rendered top ≈ 556px   (SVG y=409 × scale 580/645 + 188)
-   CSS animation scales the border outward and fades — no JS needed. */
-.door-pulse {
-	position: absolute;
-	left: 642px;
-	top: 556px;
-	width: 82px;
-	height: 105px;
-	border: 2px solid var(--pulse-color);
-	border-radius: 3px;
-	pointer-events: none;
-	transform-origin: center center;
-	animation: door-pulse var(--pulse-duration) ease-out infinite;
+/* ─── Door indicator pulse ────────────────────────────────────────────────── */
+/* Targets id="indicator" — the pink rect element inlined in scene.svg.
+   Lives inside the SVG so it automatically scales/pans with the scene.
+   transform-box: fill-box anchors transform-origin to the element's own box.
+   Bottom edge is pinned; element grows upward and sideways as it pulses. */
+#indicator {
+	transform-box: fill-box;
+	transform-origin: center bottom;
+	animation: indicator-pulse var(--indicator-duration) ease-out infinite;
 }
 
-@keyframes door-pulse {
+@keyframes indicator-pulse {
 	0%   { transform: scale(1);   opacity: 1; }
-	100% { transform: scale(2.6); opacity: 0; }
+	100% { transform: scale(1.5); opacity: 0; }
 }
 
 /* ─── Custom cursor ───────────────────────────────────────────────────────── */
@@ -281,10 +273,7 @@ html { cursor: none; }
 	.cloud {
 		animation: none;
 	}
-	.sparkle {
-		animation-duration: 200ms;
-	}
-	.door-pulse {
+	#indicator {
 		animation: none;
 	}
 }

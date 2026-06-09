@@ -128,17 +128,22 @@ These are y-coordinates in the **original SVG viewBox** (0 0 6068 645):
 **If `scene.svg` is replaced, measure the new y-values from the new SVG and update
 `BINDER_DEFS` in `app.js`.**
 
-### Open threshold
+### Scale range and easing
 
 ```js
-const BLIND_OPEN_THRESHOLD = 0.8;
-const blindRaw = (currentSceneScale - BLIND_OPEN_THRESHOLD) / (SCALE_MAX - BLIND_OPEN_THRESHOLD);
-const blindProgress = smoothstep(Math.max(0, Math.min(1, blindRaw)));
-const slatScaleY = 1 - blindProgress * 0.98;  // 1 = closed, ~0.02 = fully open
+const BLIND_CLOSED_SCALE   = 65;    // far: each 1px slat scales to 65px → fills SVG window y=415–480
+const BLIND_OPEN_THRESHOLD = 0.65;  // scene scale at which collapse begins
+const t            = Math.max(0, Math.min(1, blindRaw));
+const blindProgress = t * t * t;   // cubic ease-in: slow start, fast snap near door
+const slatScaleY   = 1 + (BLIND_CLOSED_SCALE - 1) * (1 - blindProgress);
 ```
 
-Blinds start opening when `currentSceneScale` exceeds 0.8 and finish opening at
-`SCALE_MAX` (1.6).
+- **Far from door** (`blindProgress=0`): `slatScaleY=65` — slats fill the window opening (SVG y 415→480).
+- **Near door** (`blindProgress=1`): `slatScaleY=1` — slats at native 1px height.
+- Cubic easing keeps slats solid for most of the approach, then snaps them
+  to 1px rapidly in the final stretch.
+- No gap in either state: at scale=1 slats are 1px each, 1px apart (touching);
+  at scale>1 they overlap, filling the window solidly.
 
 ---
 
@@ -237,27 +242,30 @@ Bubble appears after 2 s of no mouse movement; hides immediately on any movement
 
 ---
 
-## Door pulse
+## Door indicator pulse
 
-A `position: absolute` div inside `.scene-layer` (`[data-door-pulse]`):
+The `id="indicator"` element is a `<path>` inlined in `scene.svg` (a rect slightly
+larger than the door, fill `#FFB8B8`). It is animated entirely with CSS — no JS needed.
+Because it lives inside the inline SVG → `.scene-layer`, it scales and pans with the
+scene automatically.
 
 ```css
-.door-pulse {
-    left: 642px;    /* door_cx(683) − half_width(41) */
-    top:  556px;    /* door SVG y=409 × render scale (580/645) + 188 ≈ 556px */
-    width: 82px;
-    height: 105px;
-    animation: door-pulse var(--pulse-duration) ease-out infinite;
+#indicator {
+    transform-box: fill-box;       /* origin relative to element's own bounding box */
+    transform-origin: center bottom; /* bottom edge pinned; grows upward + sideways */
+    animation: indicator-pulse var(--indicator-duration) ease-out infinite;
 }
 
-@keyframes door-pulse {
+@keyframes indicator-pulse {
     0%   { transform: scale(1);   opacity: 1; }
-    100% { transform: scale(2.6); opacity: 0; }
+    100% { transform: scale(1.5); opacity: 0; }
 }
 ```
 
-Lives inside `.scene-layer` so it scales and pans with the scene automatically —
-no JS required.
+- `transform-box: fill-box` is required; without it `transform-origin` is relative to
+  the SVG canvas, not the element itself.
+- Duration token: `--indicator-duration: 2.5s` in `tokens.css`.
+- The old `[data-door-pulse]` div and `.door-pulse` CSS have been removed.
 
 ---
 

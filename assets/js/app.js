@@ -231,13 +231,17 @@ function loop(now) {
   cloudsLayer.style.opacity = 1 - fadeFraction * 0.5;  // 1.0 → 0.5
 
   // — Binder / blind animation —
-  // Blinds start opening once the scene zoom exceeds BLIND_OPEN_THRESHOLD.
-  // blindProgress: 0 = fully closed, 1 = fully open (slats at ~1px each).
-  const BLIND_OPEN_THRESHOLD = 0.8;
-  const blindRaw      = (currentSceneScale - BLIND_OPEN_THRESHOLD) / (SCALE_MAX - BLIND_OPEN_THRESHOLD);
-  const blindProgress = smoothstep(Math.max(0, Math.min(1, blindRaw)));
-  // scaleY: 1 = full height (closed), 0.02 ≈ 1px visible (open)
-  const slatScaleY    = 1 - blindProgress * 0.98;
+  // Far from door: slats at BLIND_CLOSED_SCALE (fills window opening, y=415→480).
+  // Near door: slats collapse quickly to 1 (native 1px SVG height).
+  // Cubic easing (t³) keeps slats solid through most of the approach, then
+  // snaps them to 1px rapidly in the final stretch — the "very quick" collapse.
+  const BLIND_CLOSED_SCALE  = 65;   // 65 × 1px native = 65px, fills SVG window y=415–480
+  const BLIND_OPEN_THRESHOLD = 0.65; // scene scale at which collapse begins
+  const blindRaw    = (currentSceneScale - BLIND_OPEN_THRESHOLD) / (SCALE_MAX - BLIND_OPEN_THRESHOLD);
+  const t           = Math.max(0, Math.min(1, blindRaw));
+  const blindProgress = t * t * t;  // cubic: slow start, fast snap at the door
+  // Lerp: BLIND_CLOSED_SCALE (far) → 1 (near)
+  const slatScaleY  = 1 + (BLIND_CLOSED_SCALE - 1) * (1 - blindProgress);
   binderEls.forEach(({ el, yTop }) => {
     if (!el) return;
     // translate-scale-translate keeps the collapse anchored to the slat's top edge
