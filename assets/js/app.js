@@ -18,11 +18,11 @@ const speechBubble = document.querySelector('[data-speech-bubble]');
 // collapse upward together — like a blind being raised.
 const BINDER_DEFS = [
   { id: 'binder',   yTop: 415 },
-  { id: 'binder_2', yTop: 416 },
-  { id: 'binder_3', yTop: 418 },
-  { id: 'binder_4', yTop: 417 },
-  { id: 'binder_5', yTop: 419 },
-  { id: 'binder_6', yTop: 420 },
+  { id: 'binder_2', yTop: 426 },
+  { id: 'binder_3', yTop: 447 },
+  { id: 'binder_4', yTop: 437 },
+  { id: 'binder_5', yTop: 458 },
+  { id: 'binder_6', yTop: 469 },
 ];
 const binderEls = BINDER_DEFS.map(d => ({
   el:   document.getElementById(d.id),
