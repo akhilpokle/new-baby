@@ -119,11 +119,11 @@ These are y-coordinates in the **original SVG viewBox** (0 0 6068 645):
 | id | yTop |
 |---|---|
 | `binder` | 415 |
-| `binder_2` | 426 |
-| `binder_3` | 447 |
-| `binder_4` | 437 |
-| `binder_5` | 458 |
-| `binder_6` | 469 |
+| `binder_2` | 416 |
+| `binder_3` | 418 |
+| `binder_4` | 417 |
+| `binder_5` | 419 |
+| `binder_6` | 420 |
 
 **If `scene.svg` is replaced, measure the new y-values from the new SVG and update
 `BINDER_DEFS` in `app.js`.**
