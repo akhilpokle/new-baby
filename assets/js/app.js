@@ -237,9 +237,9 @@ function loop(now) {
   // snaps them to 1px rapidly in the final stretch — the "very quick" collapse.
   const BLIND_CLOSED_SCALE  = 65;   // 65 × 1px native = 65px, fills SVG window y=415–480
   const BLIND_OPEN_THRESHOLD = 0.65; // scene scale at which collapse begins
-  const blindRaw    = (currentSceneScale - BLIND_OPEN_THRESHOLD) / (SCALE_MAX - BLIND_OPEN_THRESHOLD);
-  const t           = Math.max(0, Math.min(1, blindRaw));
-  const blindProgress = t * t * t;  // cubic: slow start, fast snap at the door
+  const blindRaw      = (currentSceneScale - BLIND_OPEN_THRESHOLD) / (SCALE_MAX - BLIND_OPEN_THRESHOLD);
+  const tBlind        = Math.max(0, Math.min(1, blindRaw));
+  const blindProgress = tBlind * tBlind * tBlind;  // cubic: slow start, fast snap at the door
   // Lerp: BLIND_CLOSED_SCALE (far) → 1 (near)
   const slatScaleY  = 1 + (BLIND_CLOSED_SCALE - 1) * (1 - blindProgress);
   binderEls.forEach(({ el, yTop }) => {
