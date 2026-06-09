@@ -63,12 +63,12 @@ body {
 
 /* Panoramic inline SVG — both dimensions must be explicit (width:auto doesn't
    work for inline SVG the way it does for <img>).
-   width = 6068 × (580 / 645) = 5457px preserves the viewBox aspect ratio.
+   width = 6068 × (580 / 645) = 5456px preserves the viewBox aspect ratio.
    left = --scene-x-offset pins the door to stage x=683. */
 .scene-img {
 	position: absolute;
 	height: 580px;
-	width: 5457px;
+	width: 5456px;
 	bottom: 0;
 	left: var(--scene-x-offset);
 	display: block;
@@ -139,12 +139,12 @@ body {
 /* Lives inside .scene-layer so it zooms/pans with the scene.
    Positioned at the door's unscaled scene-layer coordinates:
      left = door_cx(683) − half_w(41) = 642px
-     top  = door rendered top ≈ 596px   (SVG y=454 × scale 580/645)
+     top  = door rendered top ≈ 556px   (SVG y=409 × scale 580/645 + 188)
    CSS animation scales the border outward and fades — no JS needed. */
 .door-pulse {
 	position: absolute;
 	left: 642px;
-	top: 596px;
+	top: 556px;
 	width: 82px;
 	height: 105px;
 	border: 2px solid var(--pulse-color);

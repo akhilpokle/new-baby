@@ -48,7 +48,7 @@ door_rendered_x   = door_svg_cx × (rendered_height / svgViewBoxH)
 ```
 
 Current values: SVG viewBox 6068 × 645, rendered height 580 px,
-door SVG cx ≈ 2441 → `683 − 2194 = −1511 px`.
+door SVG cx = (2669.57 + 2760.85) / 2 = 2715 → `683 − 2442 = −1759 px`.
 
 If the SVG changes shape or the door moves, recalculate and update `tokens.css`.
 

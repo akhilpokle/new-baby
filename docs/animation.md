@@ -87,7 +87,7 @@ decelerates far away — avoids a jerky linear mapping.
 ```js
 const DOOR_X        = 683;   // stage centre x — door is pinned here by --scene-x-offset
 const DOOR_Y        = 768;   // bottom of stage — ground level (zoom anchor y)
-const DOOR_CENTER_Y = 649;   // door's visual centre y — used ONLY for cursor arrow angle
+const DOOR_CENTER_Y = 608;   // door's visual centre y — used ONLY for cursor arrow angle
 ```
 
 `DOOR_Y = 768` (not the door's visual centre) because the zoom transform-origin is
@@ -118,12 +118,12 @@ These are y-coordinates in the **original SVG viewBox** (0 0 6068 645):
 
 | id | yTop |
 |---|---|
-| `binder` | 460 |
-| `binder_2` | 471 |
-| `binder_3` | 481 |
-| `binder_4` | 493 |
-| `binder_5` | 504 |
-| `binder_6` | 514 |
+| `binder` | 415 |
+| `binder_2` | 426 |
+| `binder_3` | 447 |
+| `binder_4` | 437 |
+| `binder_5` | 458 |
+| `binder_6` | 469 |
 
 **If `scene.svg` is replaced, measure the new y-values from the new SVG and update
 `BINDER_DEFS` in `app.js`.**
@@ -244,7 +244,7 @@ A `position: absolute` div inside `.scene-layer` (`[data-door-pulse]`):
 ```css
 .door-pulse {
     left: 642px;    /* door_cx(683) − half_width(41) */
-    top:  596px;    /* door SVG y=454 × render scale (580/645) ≈ 596px */
+    top:  556px;    /* door SVG y=409 × render scale (580/645) + 188 ≈ 556px */
     width: 82px;
     height: 105px;
     animation: door-pulse var(--pulse-duration) ease-out infinite;

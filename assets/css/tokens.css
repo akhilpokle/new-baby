@@ -62,8 +62,8 @@
 	     rendered_w = 6068 × (580 / 645) ≈ 5457px
 	     door_rendered_x = door_svg_cx × (580 / 645)
 	     --scene-x-offset = 683 − door_rendered_x
-	   Current door SVG centre x ≈ 2441 → offset = 683 − 2194 = −1511px */
-	--scene-x-offset:        -1511px;
+	   Current door SVG centre x = (2669.57 + 2760.85) / 2 = 2715 → offset = 683 − 2442 = −1759px */
+	--scene-x-offset:        -1759px;
 
 	/* Scene — zoom transform-origin (stage px coords)
 	   x=683 = stage centre = door position after offset is applied.

@@ -17,12 +17,12 @@ const speechBubble = document.querySelector('[data-speech-bubble]');
 // The transform scales each slat from its own top edge downward, so they all
 // collapse upward together — like a blind being raised.
 const BINDER_DEFS = [
-  { id: 'binder',   yTop: 460 },
-  { id: 'binder_2', yTop: 471 },
-  { id: 'binder_3', yTop: 481 },
-  { id: 'binder_4', yTop: 493 },
-  { id: 'binder_5', yTop: 504 },
-  { id: 'binder_6', yTop: 514 },
+  { id: 'binder',   yTop: 415 },
+  { id: 'binder_2', yTop: 426 },
+  { id: 'binder_3', yTop: 447 },
+  { id: 'binder_4', yTop: 437 },
+  { id: 'binder_5', yTop: 458 },
+  { id: 'binder_6', yTop: 469 },
 ];
 const binderEls = BINDER_DEFS.map(d => ({
   el:   document.getElementById(d.id),
@@ -150,9 +150,9 @@ document.addEventListener('mousemove', (e) => {
 //         screen bottom at every scale value.
 const DOOR_X        = 683;
 const DOOR_Y        = 768;
-// Door centre y in unscaled stage coords (SVG y≈512 × render scale 580/645 + top offset).
+// Door centre y in unscaled stage coords (SVG y centre=(409+525.941)/2=467 × scale 580/645 + 188).
 // Used for the cursor arrow's directional angle — not for zoom/transform-origin.
-const DOOR_CENTER_Y = 649;
+const DOOR_CENTER_Y = 608;
 
 // Distance from door to the far corner of the stage — used to normalise cursor distance
 const MAX_DIST = Math.hypot(DOOR_X, DOOR_Y);
