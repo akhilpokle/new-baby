@@ -239,13 +239,12 @@ function loop(now) {
   // Driven by targetSceneScale (cursor position, no lag) so slats fully
   // reach 0 when the cursor is at the door.
   // currentBlindProgress lerps at 0.14 so the collapse is visible but quick.
-  const BLIND_OPEN_THRESHOLD = 0.65;
   const BLIND_LERP           = 0.22;
-  const blindRaw             = (targetSceneScale - BLIND_OPEN_THRESHOLD) / (SCALE_MAX - BLIND_OPEN_THRESHOLD);
-  const tBlind               = Math.max(0, Math.min(1, blindRaw));
-  const targetBlindProgress  = tBlind * tBlind * tBlind;
+  const BINDER_OPEN_DIST     = 300; // stage px from door centre — collapse starts here
+  const doorDist             = Math.hypot(targetX - DOOR_X, targetY - DOOR_CENTER_Y);
+  const blindRaw             = 1 - Math.min(doorDist / BINDER_OPEN_DIST, 1);
+  const targetBlindProgress  = blindRaw * blindRaw * blindRaw; // cubic: fast snap near door
   currentBlindProgress      += (targetBlindProgress - currentBlindProgress) * BLIND_LERP;
-  // Snap to target when close enough — lerp is asymptotic and never truly reaches 1
   if (Math.abs(currentBlindProgress - targetBlindProgress) < 0.02) currentBlindProgress = targetBlindProgress;
   const slatScaleY           = 1 - currentBlindProgress;
   binderEls.forEach(({ el, yTop }) => {
