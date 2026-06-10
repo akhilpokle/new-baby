@@ -45,6 +45,31 @@ const binderEls = BINDER_DEFS.map(d => ({
   yTop: d.yTop,
 }));
 
+// Home-deco reveal — the rest of the window scene, choreographed off the same
+// cursor→house proximity that drives the binders. Each element starts translated
+// OUT of the fixed window clip (clip1: x2795–2976, y415–479) so it is hidden, then
+// animates back to translate(0,0). SVG units (the scene's own coordinate space).
+const peopleEl    = document.getElementById('people');                 // jumps up from below the sill
+const decoEl      = document.getElementById('deco');                   // slides in from the right
+const imageEl     = document.getElementById('image 1 [Vectorized]');   // slides in from the left
+const image35851El = document.getElementById('image 35851');           // small rect, slides in from left
+
+// Hide-offsets: how far each element sits outside the window clip when fully hidden.
+const PEOPLE_HIDE_Y = 60;  // push people down below the sill (y446→506, past clip bottom 479)
+const DECO_HIDE_X   = 50;  // push deco right, past the window's right edge
+const IMAGE_HIDE_X  = 60;  // push image(s) left, past the window's left edge
+
+// Binder: distance-driven, opens only when the cursor is genuinely close to the house.
+const BINDER_OPEN_DIST = 190; // stage px from the house box where the blind starts rolling up
+
+// Entrance (people + deco + image): a time-based one-shot, NOT tied to cursor distance.
+// It plays forward over ENTRANCE_DURATION once the cursor crosses into the house area,
+// then snaps hidden the instant the cursor leaves. TRIGGER_IN/OUT give a little hysteresis
+// so hovering right at the edge doesn't flicker.
+const ENTRANCE_DURATION   = 280; // ms — quick "instant" burst
+const ENTRANCE_TRIGGER_IN  = 150; // px: enter the house area → start the entrance
+const ENTRANCE_TRIGGER_OUT = 190; // px: leave past this → snap hidden
+
 // ── Read tuning values from CSS custom properties ─────────────────────────────
 // Liferay devs adjust these in tokens.css; JS reads once at init
 const css = getComputedStyle(document.documentElement);
@@ -167,17 +192,37 @@ const DOOR_CENTER_Y = 608;
 // Distance from door to the far corner of the stage — used to normalise cursor distance
 const MAX_DIST = Math.hypot(DOOR_X, DOOR_Y);
 
+// Main-house bounding box in stage coords — drives the binder/blind reveal.
+// Derived from the house geometry in the inline SVG (roof+wall span x 2564–3196,
+// y 71–527) mapped through the scene transform: stage = svg × (580/645) + offset
+// (offset_x = −1759, offset_y = +188), matching --scene-x-offset in tokens.css.
+//   x: 2564→547, 3196→1115   y: 71→252, 527→662
+// Recompute these if scene.svg / the house art changes.
+const HOUSE_BOX = { x0: 547, y0: 252, x1: 1115, y1: 662 };
+
 let currentSceneScale = SCALE_MIN;
 let targetSceneScale  = SCALE_MIN;
 
-// Blind has its own lerp state — independent of scene zoom so it can
-// target cursor position directly and animate at its own (faster) speed.
-let currentBlindProgress = 0;  // 0 = fully closed (slats tall), 1 = fully open (slats 1px)
+// Binder openness — distance-driven lerp state (0 = blind down, 1 = fully rolled up).
+let binderProgress = 0;
+// Entrance progress — time-driven (0 = people/deco/image hidden, 1 = fully revealed).
+// Advances over ENTRANCE_DURATION while the cursor is in the house area; snaps to 0
+// on leave. entranceOn latches the trigger for hysteresis.
+let entranceProgress = 0;
+let entranceOn       = false;
 
 // smoothstep: smooth S-curve easing for the distance → scale mapping
 function smoothstep(t) {
   t = Math.max(0, Math.min(1, t));
   return t * t * (3 - 2 * t);
+}
+
+// easeOutBack: ease-out with overshoot — rises past 1 then settles, giving the
+// people their "surprised jump" before landing in the window.
+function easeOutBack(t) {
+  const c1 = 1.70158;
+  const c3 = c1 + 1;
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
 }
 
 
@@ -241,29 +286,44 @@ function loop(now) {
   );
   cloudsLayer.style.opacity = 1 - fadeFraction * 0.5;  // 1.0 → 0.5
 
-  // — Binder / blind animation —
-  // slatScaleY: 1 = native SVG height (closed), 0 = fully collapsed (open).
-  // Driven by targetSceneScale (cursor position, no lag) so slats fully
-  // reach 0 when the cursor is at the door.
-  // currentBlindProgress lerps at 0.14 so the collapse is visible but quick.
-  const BLIND_LERP            = 0.22;
-  const BINDER_OPEN_DIST      = 300; // stage px from door centre — collapse starts here
-  const BINDER_FULL_OPEN_DIST = 60;  // within this radius the blind is fully open (height 0)
-  const doorDist             = Math.hypot(targetX - DOOR_X, targetY - DOOR_CENTER_Y);
-  // Deadzone: reach progress 1 within BINDER_FULL_OPEN_DIST instead of needing the
-  // cursor on the exact door-centre pixel — otherwise the slats never fully collapse.
-  const blindSpan            = BINDER_OPEN_DIST - BINDER_FULL_OPEN_DIST;
-  const blindRaw             = 1 - Math.min(Math.max((doorDist - BINDER_FULL_OPEN_DIST) / blindSpan, 0), 1);
-  const targetBlindProgress  = blindRaw * blindRaw * blindRaw; // cubic: fast snap near door
-  currentBlindProgress      += (targetBlindProgress - currentBlindProgress) * BLIND_LERP;
-  if (Math.abs(currentBlindProgress - targetBlindProgress) < 0.02) currentBlindProgress = targetBlindProgress;
-  const slatScaleY           = 1 - currentBlindProgress;
+  // — Window scene: distance-driven binder + time-driven entrance —
+  // Distance from the cursor to the house box (0 when the cursor is over the house).
+  const houseDX   = Math.max(HOUSE_BOX.x0 - targetX, 0, targetX - HOUSE_BOX.x1);
+  const houseDY   = Math.max(HOUSE_BOX.y0 - targetY, 0, targetY - HOUSE_BOX.y1);
+  const houseDist = Math.hypot(houseDX, houseDY);
+
+  // Binders: distance-driven, reversible. Open only when the cursor is genuinely close
+  // (within BINDER_OPEN_DIST). Lerp + snap so the slats settle exactly to height 0.
+  const BINDER_LERP  = 0.22;
+  const binderTarget = 1 - Math.min(houseDist / BINDER_OPEN_DIST, 1);
+  binderProgress    += (binderTarget - binderProgress) * BINDER_LERP;
+  if (Math.abs(binderProgress - binderTarget) < 0.01) binderProgress = binderTarget;
+  const slatScaleY   = 1 - binderProgress * binderProgress * binderProgress; // cubic snap
   binderEls.forEach(({ el, yTop }) => {
     if (!el) return;
     // translate-scale-translate keeps the collapse anchored to the slat's top edge
     el.setAttribute('transform',
       `translate(0,${yTop}) scale(1,${slatScaleY}) translate(0,${-yTop})`);
   });
+
+  // Entrance: time-based one-shot, independent of cursor distance once triggered.
+  // Hysteresis: latch ON inside TRIGGER_IN, latch OFF outside TRIGGER_OUT.
+  if (houseDist < ENTRANCE_TRIGGER_IN)  entranceOn = true;
+  if (houseDist > ENTRANCE_TRIGGER_OUT) entranceOn = false;
+  if (entranceOn) {
+    // Play forward at a fixed rate (dt-based) — same speed regardless of mouse motion.
+    entranceProgress = Math.min(1, entranceProgress + dt / ENTRANCE_DURATION);
+  } else {
+    entranceProgress = 0; // snap hidden the instant the cursor leaves the house area
+  }
+
+  // All three animate together off entranceProgress: people jump (overshoot), deco/image slide.
+  const peopleP = reducedMotion ? smoothstep(entranceProgress) : easeOutBack(entranceProgress);
+  const sideP   = smoothstep(entranceProgress);
+  if (peopleEl)     peopleEl.setAttribute('transform',     `translate(0,${PEOPLE_HIDE_Y * (1 - peopleP)})`);
+  if (decoEl)       decoEl.setAttribute('transform',       `translate(${DECO_HIDE_X * (1 - sideP)},0)`);
+  if (imageEl)      imageEl.setAttribute('transform',      `translate(${-IMAGE_HIDE_X * (1 - sideP)},0)`);
+  if (image35851El) image35851El.setAttribute('transform', `translate(${-IMAGE_HIDE_X * (1 - sideP)},0)`);
 
   requestAnimationFrame(loop);
 }
