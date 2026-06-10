@@ -10,7 +10,7 @@ const cloudsLayer  = document.querySelector('[data-clouds-layer]');
 const storkEl      = document.querySelector('[data-stork]');
 const storkFrame   = document.querySelector('[data-stork-frame]');
 const cursorEl     = document.querySelector('[data-cursor]');
-const speechBubble = document.querySelector('[data-speech-bubble]');
+
 
 // Binder slats — window blind inside the SVG.
 // Each entry: SVG element id + the y-coordinate of its TOP edge in SVG space.
@@ -122,10 +122,6 @@ let prevX     = startX;
 let prevY     = startY;
 let lastFlip  = 1;  // remembered between frames so stork holds direction when idle
 
-// Idle timer — shows speech bubble after 2 s of no mouse movement.
-// Starts immediately so bubble appears if the user never moves the mouse.
-let idleTimer = setTimeout(() => speechBubble.classList.add('is-visible'), 2000);
-
 document.addEventListener('mousemove', (e) => {
   // Clamp to stage bounds so the stork target never leaves the 1366×768 space
   targetX = Math.max(0, Math.min(STAGE_W, (e.clientX - stageOffsetX) / stageScale));
@@ -134,11 +130,6 @@ document.addEventListener('mousemove', (e) => {
   // Rotate cursor arrow to always point toward the door
   const angle = Math.atan2(DOOR_CENTER_Y - targetY, DOOR_X - targetX) * (180 / Math.PI);
   cursorEl.style.transform = `translate(${e.clientX}px, ${e.clientY}px) rotate(${angle}deg)`;
-
-  // Hide speech bubble while the mouse is moving; restart 2 s idle countdown
-  clearTimeout(idleTimer);
-  speechBubble.classList.remove('is-visible');
-  idleTimer = setTimeout(() => speechBubble.classList.add('is-visible'), 2000);
 });
 
 // Cursor stays visible — the stork follows the cursor rather than replacing it
@@ -211,10 +202,7 @@ function loop(now) {
   const beakOffsetX = lastFlip === 1 ? 8 : -8;
   storkEl.style.transform = `translate(${storkX + beakOffsetX}px, ${storkY}px) rotate(${angle}deg) scaleX(${lastFlip})`;
 
-  // Position speech bubble above stork (stage coords; centred horizontally on stork)
-  speechBubble.style.transform = `translate(${storkX - 70}px, ${storkY - 135}px)`;
-
-  // — Scene zoom: map cursor distance to door → scale —
+// — Scene zoom: map cursor distance to door → scale —
   const dist       = Math.hypot(targetX - DOOR_X, targetY - DOOR_Y);
   const normalised = Math.min(dist / MAX_DIST, 1);          // 0 = at door, 1 = far away
   const t          = smoothstep(1 - normalised);            // invert: near door = high t

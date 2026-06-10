@@ -187,45 +187,6 @@ html { cursor: none; }
 		drop-shadow(0 2px 3px rgba(0, 0, 0, 0.30)); */
 }
 
-/* ─── Speech bubble ───────────────────────────────────────────────────────── */
-/* Absolute inside .stage (sibling of .stork-wrapper, NOT a child).
-   JS updates transform: translate(storkX, storkY) each rAF frame so it
-   follows the stork. Fades in after 2 s of mouse inactivity. */
-.speech-bubble {
-	position: absolute;
-	left: 0;
-	top: 0;
-	background: #ffffff;
-	color: var(--color-text);
-	font-size: 13px;
-	line-height: 1.4;
-	padding: 7px 13px;
-	border-radius: 14px;
-	white-space: nowrap;
-	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
-	pointer-events: none;
-	z-index: 6;
-	opacity: 0;
-	transition: opacity 0.3s ease;
-	will-change: transform, opacity;
-}
-
-.speech-bubble.is-visible {
-	opacity: 1;
-}
-
-/* Downward-pointing tail aligned to left third of bubble */
-.speech-bubble::after {
-	content: '';
-	position: absolute;
-	bottom: -7px;
-	left: 20px;
-	width: 0;
-	height: 0;
-	border-left: 7px solid transparent;
-	border-right: 7px solid transparent;
-	border-top: 7px solid #ffffff;
-}
 
 /* ─── Loader overlay ──────────────────────────────────────────────────────── */
 /* Matches the sky gradient so the reveal feels seamless.
