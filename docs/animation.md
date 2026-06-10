@@ -198,30 +198,72 @@ so all clouds appear mid-cycle on page load (no initial snap).
 
 ---
 
-## Custom cursor arrow
+## Sparkle trail
 
-The OS cursor is hidden globally (`html { cursor: none }`). A `position: fixed`
-zero-size div (`[data-cursor]`) sits outside the stage and receives:
+The OS cursor is hidden globally (`html { cursor: none }`). On every `mousemove`
+event (throttled to one per 50 ms), a `div.sparkle` containing `✦` is appended
+to `document.body` at the client-space cursor position and removed when its
+CSS animation ends.
 
-```js
-cursorEl.style.transform = `translate(${e.clientX}px, ${e.clientY}px) rotate(${angle}deg)`;
-```
-
-The `::after` pseudo-element renders the 32 × 32 PNG (`cursor-arrow.png`), offset
-`top: -16px` to vertically centre it on the origin point.
-
-### Rotation angle calculation
+### JS (app.js)
 
 ```js
-const angle = Math.atan2(DOOR_CENTER_Y - targetY, DOOR_X - targetX) * (180 / Math.PI);
+const SPARKLE_COLORS   = ['#FFD700', '#FFB8B8', '#FFFFFF'];
+let   lastSparkleTime  = 0;
+const SPARKLE_INTERVAL = 50; // ms
+
+function createSparkle(x, y) {
+  const el = document.createElement('div');
+  el.className   = 'sparkle';
+  el.textContent = '✦';
+  const ox    = (Math.random() - 0.5) * 20;
+  const oy    = (Math.random() - 0.5) * 20;
+  const color = SPARKLE_COLORS[Math.floor(Math.random() * SPARKLE_COLORS.length)];
+  el.style.cssText = `left:${x+ox}px;top:${y+oy}px;color:${color};transform:rotate(${Math.random()*360}deg)`;
+  document.body.appendChild(el);
+  el.addEventListener('animationend', () => el.remove(), { once: true });
+}
+
+// In mousemove handler:
+const now = performance.now();
+if (now - lastSparkleTime > SPARKLE_INTERVAL) {
+  createSparkle(e.clientX, e.clientY);
+  lastSparkleTime = now;
+}
 ```
 
-`targetX / Y` are **stage coordinates** of the cursor; `DOOR_CENTER_Y` (649) is the
-door's visual centre in stage space. The arrow always points from cursor toward door.
+Sparkles are positioned in **client space** (`e.clientX / clientY`), not stage space —
+they sit outside the scaled stage element so they don't skew or scale with the scene.
 
-**Note:** `filter: drop-shadow` is disabled on this element. Adding it causes
-compositor lag because every `mousemove` forces a repaint on a `position: fixed`
-element with a filter. See `gotchas.md`.
+### CSS (styles.css + tokens.css)
+
+```css
+/* tokens.css */
+--sparkle-size:     14px;
+--sparkle-duration: 0.6s;
+
+/* styles.css */
+.sparkle {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9998;
+    font-size: var(--sparkle-size);
+    line-height: 1;
+    animation: sparkle-fade var(--sparkle-duration) ease-out forwards;
+    transform-origin: center;
+    user-select: none;
+}
+
+@keyframes sparkle-fade {
+    0%   { transform: scale(1) rotate(0deg);  opacity: 1; }
+    100% { transform: scale(0) rotate(45deg); opacity: 0; }
+}
+```
+
+- Each sparkle has a random ±10 px position jitter and a random initial rotation,
+  giving a scattered trail rather than a rigid line.
+- Colors: gold `#FFD700`, soft pink `#FFB8B8`, white `#FFFFFF` — match the baby/home theme.
+- DOM cleanup is automatic: `animationend` removes the element so there is no accumulation.
 
 ---
 

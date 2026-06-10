@@ -9,7 +9,23 @@ const sceneLayer   = document.querySelector('[data-scene-layer]');
 const cloudsLayer  = document.querySelector('[data-clouds-layer]');
 const storkEl      = document.querySelector('[data-stork]');
 const storkFrame   = document.querySelector('[data-stork-frame]');
-const cursorEl     = document.querySelector('[data-cursor]');
+
+// ── Sparkle trail ─────────────────────────────────────────────────────────────
+const SPARKLE_COLORS   = ['#FFD700', '#FFB8B8', '#FFFFFF'];
+let   lastSparkleTime  = 0;
+const SPARKLE_INTERVAL = 50; // ms — one sparkle per 50ms max
+
+function createSparkle(x, y) {
+  const el = document.createElement('div');
+  el.className   = 'sparkle';
+  el.textContent = '✦';
+  const ox = (Math.random() - 0.5) * 20;
+  const oy = (Math.random() - 0.5) * 20;
+  const color = SPARKLE_COLORS[Math.floor(Math.random() * SPARKLE_COLORS.length)];
+  el.style.cssText = `left:${x + ox}px;top:${y + oy}px;color:${color};transform:rotate(${Math.random() * 360}deg)`;
+  document.body.appendChild(el);
+  el.addEventListener('animationend', () => el.remove(), { once: true });
+}
 
 
 // Binder slats — window blind inside the SVG.
@@ -127,9 +143,12 @@ document.addEventListener('mousemove', (e) => {
   targetX = Math.max(0, Math.min(STAGE_W, (e.clientX - stageOffsetX) / stageScale));
   targetY = Math.max(0, Math.min(STAGE_H, (e.clientY - stageOffsetY) / stageScale));
 
-  // Rotate cursor arrow to always point toward the door
-  const angle = Math.atan2(DOOR_CENTER_Y - targetY, DOOR_X - targetX) * (180 / Math.PI);
-  cursorEl.style.transform = `translate(${e.clientX}px, ${e.clientY}px) rotate(${angle}deg)`;
+  // Sparkle trail — throttled to one per SPARKLE_INTERVAL ms
+  const now = performance.now();
+  if (now - lastSparkleTime > SPARKLE_INTERVAL) {
+    createSparkle(e.clientX, e.clientY);
+    lastSparkleTime = now;
+  }
 });
 
 // Cursor stays visible — the stork follows the cursor rather than replacing it
@@ -227,10 +246,14 @@ function loop(now) {
   // Driven by targetSceneScale (cursor position, no lag) so slats fully
   // reach 0 when the cursor is at the door.
   // currentBlindProgress lerps at 0.14 so the collapse is visible but quick.
-  const BLIND_LERP           = 0.22;
-  const BINDER_OPEN_DIST     = 300; // stage px from door centre — collapse starts here
+  const BLIND_LERP            = 0.22;
+  const BINDER_OPEN_DIST      = 300; // stage px from door centre — collapse starts here
+  const BINDER_FULL_OPEN_DIST = 60;  // within this radius the blind is fully open (height 0)
   const doorDist             = Math.hypot(targetX - DOOR_X, targetY - DOOR_CENTER_Y);
-  const blindRaw             = 1 - Math.min(doorDist / BINDER_OPEN_DIST, 1);
+  // Deadzone: reach progress 1 within BINDER_FULL_OPEN_DIST instead of needing the
+  // cursor on the exact door-centre pixel — otherwise the slats never fully collapse.
+  const blindSpan            = BINDER_OPEN_DIST - BINDER_FULL_OPEN_DIST;
+  const blindRaw             = 1 - Math.min(Math.max((doorDist - BINDER_FULL_OPEN_DIST) / blindSpan, 0), 1);
   const targetBlindProgress  = blindRaw * blindRaw * blindRaw; // cubic: fast snap near door
   currentBlindProgress      += (targetBlindProgress - currentBlindProgress) * BLIND_LERP;
   if (Math.abs(currentBlindProgress - targetBlindProgress) < 0.02) currentBlindProgress = targetBlindProgress;

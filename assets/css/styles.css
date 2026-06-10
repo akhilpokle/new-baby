@@ -151,40 +151,23 @@ body {
 	100% { transform: scale(1.5); opacity: 0; }
 }
 
-/* ─── Custom cursor ───────────────────────────────────────────────────────── */
-/* OS pointer hidden; a right-pointing triangle follows the mouse and rotates
-   to face the door. JS sets transform: translate(x,y) rotate(deg). */
+/* ─── Sparkle trail ───────────────────────────────────────────────────────── */
 html { cursor: none; }
 
-.cursor-arrow {
+.sparkle {
 	position: fixed;
-	left: 0;
-	top: 0;
-	width: 0;
-	height: 0;
-	z-index: 9999;
 	pointer-events: none;
-	will-change: transform;
+	z-index: 9998;
+	font-size: var(--sparkle-size);
+	line-height: 1;
+	animation: sparkle-fade var(--sparkle-duration) ease-out forwards;
+	transform-origin: center;
+	user-select: none;
 }
 
-/* PNG arrow image — right-pointing, tip at far right.
-   Base (left edge) sits at the mouse position; tip extends toward the door.
-   Dimensions should match the actual cursor-arrow.png pixel size. */
-.cursor-arrow::after {
-	content: '';
-	position: absolute;
-	left: 0;
-	top: -16px;          /* −(height / 2) = −16 centres the 32px image on the origin */
-	width: 32px;
-	height: 32px;
-	background: url('../img/cursor-arrow.png') no-repeat center / contain;
-	/* outline disabled — drop-shadow on a moving fixed element causes compositor lag
-	filter:
-		drop-shadow( 1px  0px 0 #000)
-		drop-shadow(-1px  0px 0 #000)
-		drop-shadow( 0px  1px 0 #000)
-		drop-shadow( 0px -1px 0 #000)
-		drop-shadow(0 2px 3px rgba(0, 0, 0, 0.30)); */
+@keyframes sparkle-fade {
+	0%   { transform: scale(1) rotate(0deg);  opacity: 1; }
+	100% { transform: scale(0) rotate(45deg); opacity: 0; }
 }
 
 
