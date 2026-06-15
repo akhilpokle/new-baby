@@ -372,8 +372,16 @@ function loop(now) {
   storkY = Math.max(91, Math.min(STAGE_H - 82,  storkY));
 
   // — Delivery trigger: latch when stork beak reaches the door area —
+  // DOOR_CENTER_Y is the door's y in unscaled stage coords. The scene is scaled
+  // around (DOOR_X, DOOR_Y) so the door's apparent y shifts with the zoom:
+  //   apparent = DOOR_Y + (DOOR_CENTER_Y - DOOR_Y) * scale
+  // Use targetSceneScale (the settled zoom for the stork's current distance), NOT
+  // currentSceneScale: the latter lags behind via the 0.06 lerp, so during the
+  // descent it reads low and pushes the computed door-centre down the screen —
+  // which made the trigger fire at the door's BOTTOM instead of its body.
+  const apparentDoorY = DOOR_Y + (DOOR_CENTER_Y - DOOR_Y) * targetSceneScale;
   if (!deliveryTriggered &&
-      Math.hypot(storkX - DOOR_X, storkY - DOOR_CENTER_Y) < DELIVERY_ZONE_PX) {
+      Math.hypot(storkX - DOOR_X, storkY - apparentDoorY) < DELIVERY_ZONE_PX) {
     deliveryTriggered = true;
     document.body.classList.add('is-delivered');
     if (cardEl) cardEl.classList.add('is-visible');

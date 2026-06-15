@@ -56,7 +56,7 @@
 	--scene-scale-max:       1.6;
 	--ease-factor:           0.055;  /* legacy lerp factor — no longer used for the stork */
 	--stork-speed:           250px;  /* constant flight speed in px per second */
-	--delivery-zone-px:      40;
+	--delivery-zone-px:      55;
 	--sprite-fps:            10;
 
 	/* Scene — cloud drift */
