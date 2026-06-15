@@ -137,3 +137,47 @@ The stork wrapper receives `scaleX(-1)` when the stork faces right. Any child
 inherits this flip — text inside a child element would mirror. `[data-speech-bubble]`
 must remain a **sibling** of `[data-stork]` inside `.stage` and be positioned
 exclusively via JS `transform: translate(...)`.
+
+---
+
+## 13. Stork speed must be `dt`-based, and the same in BOTH phases
+
+The stork moves at a constant `--stork-speed` (px **per second**). The per-frame
+step must be `STORK_SPEED * dt / 1000` — never a fixed px/frame, or speed scales
+with refresh rate (twice as fast on a 120 Hz screen).
+
+The fly-down (`flyDown`) and active loop use the **same** constant speed on purpose.
+If the fly-down lags behind the cursor (e.g. the old proportional lerp), the stork
+arrives at the hand-off far from the cursor and then **sprints to catch up** at the
+start of active mode — which reads as a "jump to the pointer." Keep both phases on
+the same speed model. `flyDown` must be called as `flyDown(now, dt)`.
+
+---
+
+## 14. Zoom / binder / people follow the STORK, not the cursor
+
+Scene zoom, the binder blind, and the people reveal are all measured from the
+**stork's** position (`storkX/storkY`), not the cursor (`targetX/targetY`). Driving
+them off the cursor makes the world snap-zoom the instant the cursor reaches the
+door while the stork is still far away. The delivery trigger was already stork-based;
+everything proximity-driven now matches it. Don't switch these back to `targetX/Y`.
+
+---
+
+## 15. A hidden / background tab stalls the splash (testing note)
+
+The loader waits on `img.decode()`. In a **hidden or background tab** (e.g. an
+offscreen preview pane), Chromium defers `decode()` indefinitely and pauses
+`requestAnimationFrame` + CSS transitions — so the loader never clears, the splash
+never fades in, and screenshots time out. This is an environment quirk, **not** a
+code bug. Test in a real, focused browser tab (`document.visibilityState === 'visible'`).
+
+---
+
+## 16. Splash overlay z-order and the two-speed fade
+
+`.intro-overlay` (z 9999) sits **below** `.loader-overlay` (z 10000) so the loader
+covers it during load. On "Let's go" the overlay's **gradient** fades slowly
+(`--intro-flydown-duration`, doubling as the sky cross-fade) while its **content**
+(stork/text/buttons) fades fast (0.3 s) via `.is-leaving` — otherwise the splash
+stork lingers as a ghost over the descent. Keep those two durations distinct.

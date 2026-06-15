@@ -39,14 +39,23 @@
 	--line-height-normal: 1.6;
 	--line-height-loose:  1.8;
 
-	/* Scene — sky gradient (from Figma) */
-	--color-sky-top:         #a0dbff;
-	--color-sky-bottom:      #eff9ff;
+	/* Scene — sky gradient (from Figma). "Arrived" sky shown once the stork lands. */
+	--color-sky-top:         #C7EAFF;
+	--color-sky-bottom:      #EFF9FF;
+
+	/* Intro sky — higher-altitude blue shown during the splash + fly-down.
+	   The intro overlay fades from this gradient to reveal --color-sky-* beneath. */
+	--color-intro-sky-top:    #50BCFF;
+	--color-intro-sky-bottom: #C7EAFF;
+
+	/* Intro fly-down — total descent time, splash → house in view (JS reads this). */
+	--intro-flydown-duration: 3500ms;
 
 	/* Scene — interaction tuning (JS reads these at init) */
 	--scene-scale-min:       0.35;
 	--scene-scale-max:       1.6;
-	--ease-factor:           0.055;
+	--ease-factor:           0.055;  /* legacy lerp factor — no longer used for the stork */
+	--stork-speed:           250px;  /* constant flight speed in px per second */
 	--delivery-zone-px:      40;
 	--sprite-fps:            10;
 

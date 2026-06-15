@@ -9,6 +9,14 @@ const sceneLayer   = document.querySelector('[data-scene-layer]');
 const cloudsLayer  = document.querySelector('[data-clouds-layer]');
 const storkEl      = document.querySelector('[data-stork]');
 const storkFrame   = document.querySelector('[data-stork-frame]');
+const cardEl       = document.querySelector('[data-card]');
+const backdropEl   = document.querySelector('[data-backdrop]');
+
+// Intro splash refs
+const introEl      = document.querySelector('[data-intro]');
+const introStorkEl = document.querySelector('[data-intro-stork]');
+const introGoBtn   = document.querySelector('[data-intro-go]');
+const introSkipBtn = document.querySelector('[data-intro-skip]');
 
 // ── Sparkle trail ─────────────────────────────────────────────────────────────
 const SPARKLE_COLORS   = ['#FFD700', '#FFB8B8', '#FFFFFF'];
@@ -73,20 +81,31 @@ const ENTRANCE_TRIGGER_OUT = 190; // px: leave past this → snap hidden
 // ── Read tuning values from CSS custom properties ─────────────────────────────
 // Liferay devs adjust these in tokens.css; JS reads once at init
 const css = getComputedStyle(document.documentElement);
-const EASE_FACTOR   = parseFloat(css.getPropertyValue('--ease-factor'))      || 0.1;
+const STORK_SPEED   = parseFloat(css.getPropertyValue('--stork-speed'))       || 900; // px per second
 const SCALE_MIN     = parseFloat(css.getPropertyValue('--scene-scale-min'))  || 0.35;
 const SCALE_MAX     = parseFloat(css.getPropertyValue('--scene-scale-max'))  || 1.6;
 const SPRITE_FPS    = parseFloat(css.getPropertyValue('--sprite-fps'))       || 10;
 
 // ── Reduced motion ────────────────────────────────────────────────────────────
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const ease          = reducedMotion ? 0.25 : EASE_FACTOR; // snappier = less smooth travel
 const spriteFps     = reducedMotion ? 4    : SPRITE_FPS;
 const MAX_ROTATION  = reducedMotion ? 0    : 15;          // degrees
 
 // ── Stage coordinate space ────────────────────────────────────────────────────
 const STAGE_W = 1366;
 const STAGE_H = 768;
+
+// ── Intro experience ──────────────────────────────────────────────────────────
+// State machine: 'splash' (overlay shown, stork idle) → 'flying-in' (overlay fades,
+// world scrolls up to meet the stork) → 'active' (the existing cursor-follow game).
+let introState = 'splash';
+let flyInStart = 0;
+
+const FLYDOWN_DURATION = parseFloat(css.getPropertyValue('--intro-flydown-duration')) || 3500;
+const FLY_SCROLL       = STAGE_H * 2;   // "2 scrolls" of descent — world rises this far
+const FLY_STORK_Y      = 115;           // wrapper y so the frame's top sits 24px below stage top (24 + 91 beak)
+const CLOUD_PARALLAX   = 1.4;           // clouds travel faster than the scene → sweep past the stork
+const CLOUD_REST_SCALE = 1 + (SCALE_MIN - 1) * 0.5; // matches the active loop's far-rest cloud scale (no pop on hand-off)
 
 // ── Step 5: Responsive stage scaling ─────────────────────────────────────────
 // Stage is position:fixed top-left, transform-origin:top left.
@@ -139,14 +158,17 @@ Promise.all([
   ...preloaded.map(img => img.decode().catch(() => {})),
   minDelay,
 ]).finally(() => {
-  // Fade out loader
+  // Fade out loader, fade in the intro splash beneath it
   loaderEl.classList.add('is-hidden');
   loaderEl.addEventListener('transitionend', () => loaderEl.remove(), { once: true });
+  if (introEl) introEl.classList.add('is-visible');
 
-  // Start wing animation now that all frames are cached
+  // Start wing animation now that all frames are cached.
+  // Both storks (splash + stage) share the frame so the hand-off is seamless.
   setInterval(() => {
     frameIndex = (frameIndex + 1) % FRAMES.length;
     storkFrame.src = FRAMES[frameIndex];
+    if (introStorkEl) introStorkEl.src = FRAMES[frameIndex];
   }, Math.round(1000 / spriteFps));
 });
 
@@ -203,6 +225,10 @@ const HOUSE_BOX = { x0: 547, y0: 252, x1: 1115, y1: 662 };
 let currentSceneScale = SCALE_MIN;
 let targetSceneScale  = SCALE_MIN;
 
+// Delivery: latches true once the stork reaches the door — freezes stork/zoom/scene.
+const DELIVERY_ZONE_PX = parseFloat(css.getPropertyValue('--delivery-zone-px')) || 40;
+let deliveryTriggered  = false;
+
 // Binder openness — distance-driven lerp state (0 = blind down, 1 = fully rolled up).
 let binderProgress = 0;
 // Entrance progress — time-driven (0 = people/deco/image hidden, 1 = fully revealed).
@@ -225,6 +251,91 @@ function easeOutBack(t) {
   return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
 }
 
+// easeOutCubic: fast start, gentle settle — the world decelerates as the house lands.
+function easeOutCubic(t) {
+  return 1 - Math.pow(1 - t, 3);
+}
+
+
+// ── Intro controls ────────────────────────────────────────────────────────────
+// "Let's go" — begin the fly-down. The overlay's content fades fast while its sky
+// gradient fades slowly (revealing the lighter --color-sky-* beneath), so the sky
+// cross-fades over the descent. The stork snaps to top-centre and holds there.
+introGoBtn.addEventListener('click', () => {
+  if (introState !== 'splash') return;
+
+  // Reduced motion: skip the descent entirely, go straight to the live experience.
+  if (reducedMotion) {
+    introState = 'active';
+    introEl.remove();
+    return;
+  }
+
+  introState = 'flying-in';
+  flyInStart = performance.now();
+
+  // Park the stage stork at top-centre; from here only its x tracks the cursor.
+  storkX = STAGE_W / 2; prevX = storkX;
+  storkY = FLY_STORK_Y; prevY = storkY;
+  lastFlip = 1;
+
+  introEl.classList.add('is-leaving');
+  introEl.classList.remove('is-visible');
+});
+
+// "Skip" — jump straight into the live experience (no descent).
+introSkipBtn.addEventListener('click', () => {
+  if (introState !== 'splash') return;
+  introState = 'active';
+  introEl.remove();
+});
+
+// Fly-down frame: world rises to meet the stork; clouds sweep past faster.
+function flyDown(now, dt) {
+  const p  = Math.min((now - flyInStart) / FLYDOWN_DURATION, 1);
+  const pe = easeOutCubic(p);
+
+  // Scene starts FLY_SCROLL below its resting place and rises to 0.
+  const sceneOffset = (1 - pe) * FLY_SCROLL;
+  sceneLayer.style.transform = `translateY(${sceneOffset}px) scale(${SCALE_MIN})`;
+
+  // Clouds travel faster than the scene so they rush up past the stork.
+  const cloudOffset = (1 - pe) * FLY_SCROLL * CLOUD_PARALLAX;
+  cloudsLayer.style.transform = `translateY(${cloudOffset}px) scale(${CLOUD_REST_SCALE})`;
+  cloudsLayer.style.opacity   = 1;
+
+  // Stork holds near the top (the world rises to meet it); x tracks the cursor at the
+  // SAME constant speed as the live experience, so it never lags behind and there's no
+  // catch-up burst the moment the house settles and active mode takes over.
+  const dx    = targetX - storkX;
+  const stepX = STORK_SPEED * dt / 1000;
+  if (Math.abs(dx) <= stepX) storkX = targetX;       // arrive exactly, no overshoot
+  else                       storkX += Math.sign(dx) * stepX;
+  storkX = Math.max(30, Math.min(STAGE_W - 197, storkX));
+  storkY = FLY_STORK_Y;
+
+  const velX = storkX - prevX;
+  prevX = storkX;
+  prevY = storkY;
+
+  let angle = 0;
+  if (Math.abs(velX) > 0.05) {
+    angle    = Math.max(-MAX_ROTATION, Math.min(MAX_ROTATION, velX * 1.5));
+    lastFlip = velX > 0.05 ? -1 : 1;
+  }
+  const beakOffsetX = lastFlip === 1 ? 8 : -8;
+  storkEl.style.transform =
+    `translate(${storkX + beakOffsetX}px, ${storkY}px) rotate(${angle}deg) scaleX(${lastFlip})`;
+
+  // Landed: hand control to the live experience, leave scene/clouds exactly where
+  // the active loop expects them (scale SCALE_MIN, no translate) so there's no jump.
+  if (p >= 1) {
+    introState = 'active';
+    currentSceneScale = SCALE_MIN;
+    targetSceneScale  = SCALE_MIN;
+    if (introEl) introEl.remove();
+  }
+}
 
 // ── rAF loop ──────────────────────────────────────────────────────────────────
 let lastTime = performance.now();
@@ -233,15 +344,41 @@ function loop(now) {
   const dt = Math.min(now - lastTime, 50); // cap delta to avoid huge jumps on tab-switch
   lastTime = now;
 
-  // — Lerp stork toward cursor —
-  storkX += (targetX - storkX) * ease;
-  storkY += (targetY - storkY) * ease;
+  // Intro gating: the splash freezes everything; the fly-down runs its own branch.
+  if (introState === 'splash')    { requestAnimationFrame(loop); return; }
+  if (introState === 'flying-in') { flyDown(now, dt); requestAnimationFrame(loop); return; }
+
+  // — Fly stork toward cursor at a CONSTANT speed (skipped once delivery is triggered) —
+  // Straight-line path, fixed px/sec regardless of how far the cursor is, so a big
+  // gap no longer causes a fast lunge. dt-based → frame-rate independent.
+  if (!deliveryTriggered) {
+    const dx = targetX - storkX;
+    const dy = targetY - storkY;
+    const dist = Math.hypot(dx, dy);
+    const step = STORK_SPEED * dt / 1000;
+    if (dist <= step) {
+      storkX = targetX;            // close enough — arrive exactly, no overshoot/jitter
+      storkY = targetY;
+    } else {
+      storkX += (dx / dist) * step;
+      storkY += (dy / dist) * step;
+    }
+  }
 
   // Hard boundary: beak is now at the wrapper origin (0,0).
   // Frame extends: 30px left of beak, 197px right; 91px above beak, 82px below.
   // Clamp so the full sprite stays inside the 1366×768 stage.
   storkX = Math.max(30, Math.min(STAGE_W - 197, storkX));
   storkY = Math.max(91, Math.min(STAGE_H - 82,  storkY));
+
+  // — Delivery trigger: latch when stork beak reaches the door area —
+  if (!deliveryTriggered &&
+      Math.hypot(storkX - DOOR_X, storkY - DOOR_CENTER_Y) < DELIVERY_ZONE_PX) {
+    deliveryTriggered = true;
+    document.body.classList.add('is-delivered');
+    if (cardEl) cardEl.classList.add('is-visible');
+    if (backdropEl) backdropEl.classList.add('is-visible');
+  }
 
   // — Velocity for directional rotation —
   const velX = storkX - prevX;
@@ -266,33 +403,39 @@ function loop(now) {
   const beakOffsetX = lastFlip === 1 ? 8 : -8;
   storkEl.style.transform = `translate(${storkX + beakOffsetX}px, ${storkY}px) rotate(${angle}deg) scaleX(${lastFlip})`;
 
-// — Scene zoom: map cursor distance to door → scale —
-  const dist       = Math.hypot(targetX - DOOR_X, targetY - DOOR_Y);
-  const normalised = Math.min(dist / MAX_DIST, 1);          // 0 = at door, 1 = far away
-  const t          = smoothstep(1 - normalised);            // invert: near door = high t
-  targetSceneScale = SCALE_MIN + t * (SCALE_MAX - SCALE_MIN);
-  currentSceneScale += (targetSceneScale - currentSceneScale) * 0.06;
-  sceneLayer.style.transform = `scale(${currentSceneScale})`;
+  if (!deliveryTriggered) {
+  // — Scene zoom: map the STORK's distance to the door → scale —
+  // Driven by the stork (not the cursor) so the zoom only advances as fast as the
+  // stork actually flies — no sudden zoom when the cursor jumps near the door.
+    const dist       = Math.hypot(storkX - DOOR_X, storkY - DOOR_Y);
+    const normalised = Math.min(dist / MAX_DIST, 1);          // 0 = at door, 1 = far away
+    const t          = smoothstep(1 - normalised);            // invert: near door = high t
+    targetSceneScale = SCALE_MIN + t * (SCALE_MAX - SCALE_MIN);
+    currentSceneScale += (targetSceneScale - currentSceneScale) * 0.06;
+    sceneLayer.style.transform = `scale(${currentSceneScale})`;
 
   // — Cloud parallax + proximity fade —
   // Scale: clouds move at 50% of scene delta → appear farther away (parallax).
-  const cloudScale = 1 + (currentSceneScale - 1) * 0.5;
-  cloudsLayer.style.transform = `scale(${cloudScale})`;
+    const cloudScale = 1 + (currentSceneScale - 1) * 0.5;
+    cloudsLayer.style.transform = `scale(${cloudScale})`;
 
   // Opacity: fade clouds to 50% when stork approaches home (scale > 1.0 → SCALE_MAX).
   // smoothstep keeps the fade gradual rather than linear.
-  const fadeFraction  = smoothstep(
-    Math.max(0, Math.min(1, (currentSceneScale - 1) / (SCALE_MAX - 1)))
-  );
-  cloudsLayer.style.opacity = 1 - fadeFraction * 0.5;  // 1.0 → 0.5
+    const fadeFraction  = smoothstep(
+      Math.max(0, Math.min(1, (currentSceneScale - 1) / (SCALE_MAX - 1)))
+    );
+    cloudsLayer.style.opacity = 1 - fadeFraction * 0.5;  // 1.0 → 0.5
+  }
 
-  // — Window scene: distance-driven binder + time-driven entrance —
-  // Distance from the cursor to the house box (0 when the cursor is over the house).
-  const houseDX   = Math.max(HOUSE_BOX.x0 - targetX, 0, targetX - HOUSE_BOX.x1);
-  const houseDY   = Math.max(HOUSE_BOX.y0 - targetY, 0, targetY - HOUSE_BOX.y1);
+  // — Window scene: distance-driven binder + time-driven entrance (frozen on delivery) —
+  if (!deliveryTriggered) {
+  // Distance from the STORK to the house box (0 when the stork is over the house).
+  // Stork-driven (not cursor) so the blind/people react to the stork's real position.
+  const houseDX   = Math.max(HOUSE_BOX.x0 - storkX, 0, storkX - HOUSE_BOX.x1);
+  const houseDY   = Math.max(HOUSE_BOX.y0 - storkY, 0, storkY - HOUSE_BOX.y1);
   const houseDist = Math.hypot(houseDX, houseDY);
 
-  // Binders: distance-driven, reversible. Open only when the cursor is genuinely close
+  // Binders: distance-driven, reversible. Open only when the stork is genuinely close
   // (within BINDER_OPEN_DIST). Lerp + snap so the slats settle exactly to height 0.
   const BINDER_LERP  = 0.22;
   const binderTarget = 1 - Math.min(houseDist / BINDER_OPEN_DIST, 1);
@@ -306,15 +449,15 @@ function loop(now) {
       `translate(0,${yTop}) scale(1,${slatScaleY}) translate(0,${-yTop})`);
   });
 
-  // Entrance: time-based one-shot, independent of cursor distance once triggered.
+  // Entrance: time-based one-shot, independent of distance once triggered.
   // Hysteresis: latch ON inside TRIGGER_IN, latch OFF outside TRIGGER_OUT.
   if (houseDist < ENTRANCE_TRIGGER_IN)  entranceOn = true;
   if (houseDist > ENTRANCE_TRIGGER_OUT) entranceOn = false;
   if (entranceOn) {
-    // Play forward at a fixed rate (dt-based) — same speed regardless of mouse motion.
+    // Play forward at a fixed rate (dt-based) — same speed regardless of stork motion.
     entranceProgress = Math.min(1, entranceProgress + dt / ENTRANCE_DURATION);
   } else {
-    entranceProgress = 0; // snap hidden the instant the cursor leaves the house area
+    entranceProgress = 0; // snap hidden the instant the stork leaves the house area
   }
 
   // All three animate together off entranceProgress: people jump (overshoot), deco/image slide.
@@ -324,6 +467,7 @@ function loop(now) {
   if (decoEl)       decoEl.setAttribute('transform',       `translate(${DECO_HIDE_X * (1 - sideP)},0)`);
   if (imageEl)      imageEl.setAttribute('transform',      `translate(${-IMAGE_HIDE_X * (1 - sideP)},0)`);
   if (image35851El) image35851El.setAttribute('transform', `translate(${-IMAGE_HIDE_X * (1 - sideP)},0)`);
+  } // end !deliveryTriggered window-scene block
 
   requestAnimationFrame(loop);
 }

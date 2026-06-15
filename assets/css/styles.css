@@ -18,7 +18,7 @@ img {
 /* ─── Body ────────────────────────────────────────────────────────────────── */
 /* Sky gradient fills any letterbox area outside the stage */
 body {
-	font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+	font-family: "Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 	font-size: var(--font-size-md);
 	line-height: var(--line-height-normal);
 	color: var(--color-text);
@@ -209,6 +209,206 @@ html { cursor: none; }
 @keyframes loader-dot-blink {
 	0%, 80%, 100% { opacity: 0; }
 	40%           { opacity: 1; }
+}
+
+/* ─── Intro splash ────────────────────────────────────────────────────────── */
+/* Full-screen overlay shown after the loader. Background is the higher-altitude
+   intro sky; it fades to opacity 0 (revealing the lighter --color-sky-* beneath)
+   while the stork flies down. JS toggles .is-visible (fade in) and .is-leaving
+   (slow fade out, timed to the fly-down). */
+.intro-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 9999;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-6);
+	background: linear-gradient(to bottom, var(--color-intro-sky-top), var(--color-intro-sky-bottom));
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.4s ease;
+	cursor: default; /* override the global cursor:none so the splash buttons are usable */
+}
+
+.intro-overlay.is-visible {
+	opacity: 1;
+	pointer-events: auto;
+}
+
+/* Slow fade-out, timed to the fly-down so the sky gradient cross-fades as the
+   stork descends. JS adds this, then removes .is-visible to drop opacity to 0. */
+.intro-overlay.is-leaving {
+	transition-duration: var(--intro-flydown-duration);
+}
+
+/* Splash content (stork, text, buttons) clears quickly so it doesn't linger as a
+   ghost over the descent — only the sky gradient keeps fading for the full duration. */
+.intro-overlay.is-leaving .intro-stork,
+.intro-overlay.is-leaving .intro-copy,
+.intro-overlay.is-leaving .intro-actions {
+	opacity: 0;
+	transition: opacity 0.3s ease;
+}
+
+/* Match the stage stork frame exactly (227×173) for a seamless hand-off. */
+.intro-stork {
+	width: 227px;
+	height: 173px;
+	pointer-events: none;
+}
+
+.intro-copy {
+	text-align: center;
+}
+
+.intro-headline,
+.intro-subline {
+	font-size: 28px;
+	font-weight: 500;
+	color: #172733;
+	line-height: var(--line-height-snug);
+	margin: 0;
+}
+
+.intro-actions {
+	display: flex;
+	align-items: center;
+	gap: var(--space-4);
+}
+
+.intro-btn {
+	font-family: inherit;
+	font-size: var(--font-size-lg);
+	font-weight: 600;
+	cursor: pointer;
+	border: none;
+	background: none;
+}
+
+/* White pill, dark text — primary call to action. */
+.intro-btn--primary {
+	padding: 14px 28px;
+	color: #172733;
+	background: #ffffff;
+	border-radius: 999px;
+}
+
+/* Plain text — secondary, low-emphasis. */
+.intro-btn--ghost {
+	padding: 14px 8px;
+	color: #172733;
+}
+
+/* ─── Delivery backdrop ──────────────────────────────────────────────────── */
+.delivery-backdrop {
+	position: fixed;
+	inset: 0;
+	background: linear-gradient(180deg, rgba(23, 39, 51, 0.60) 0%, rgba(69, 118, 153, 0.60) 100%);
+	backdrop-filter: blur(8px);
+	-webkit-backdrop-filter: blur(8px);
+	z-index: 9998;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.6s ease;
+}
+
+.delivery-backdrop.is-visible {
+	opacity: 1;
+}
+
+/* ─── Delivery card ──────────────────────────────────────────────────────── */
+/* Slides in from below the viewport when the stork delivers; stops with its   */
+/* top edge 80px from the top of the screen. Outer element is a 10px frame;     */
+/* the inner container holds the image + content. Scrolls if taller than the    */
+/* viewport.                                                                    */
+.delivery-card {
+	position: fixed;
+	top: 80px;
+	left: 50%;
+	transform: translateX(-50%) translateY(calc(100vh + 100%));
+	transition: transform 1.4s cubic-bezier(0.16, 1, 0.3, 1);
+	width: 640px;
+	max-width: calc(100vw - 32px);
+	max-height: calc(100vh - 120px);
+	overflow-y: auto;
+	background: #ffffff;
+	border: 10px solid #ff8080;   /* decorative frame — swap for DLS token at handoff */
+	border-radius: var(--radius-md);
+	z-index: 9999;
+}
+
+.delivery-card.is-visible {
+	transform: translateX(-50%) translateY(0);
+}
+
+/* Image — full width of the card, natural aspect ratio */
+.delivery-card__image {
+	display: block;
+	width: 100%;
+	height: auto;
+}
+
+/* Content wrapper */
+.delivery-card__content {
+	padding: 24px;
+	display: flex;
+	flex-direction: column;
+}
+
+.delivery-card__greeting {
+	font-size: var(--font-size-sm);
+	color: #455057;
+	line-height: var(--line-height-snug);
+	margin: 0 0 16px;
+}
+
+/* CTA section */
+.delivery-card__section {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 16px 0;
+	border-top: 1px solid var(--color-border);
+}
+
+.delivery-card__section-title {
+	font-size: var(--font-size-sm);
+	font-weight: 600;
+	color: #172733;
+	margin: 0;
+	line-height: var(--line-height-snug);
+}
+
+.delivery-card__links {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.delivery-card__btn {
+	display: inline-flex;
+	align-items: center;
+	padding: 6px 12px;
+	font-size: var(--font-size-sm);
+	font-weight: 500;
+	color: #172733;
+	border: 1.5px solid #172733;
+	border-radius: var(--radius-sm);
+	text-decoration: none;
+	line-height: var(--line-height-tight);
+	transition: background 0.15s, color 0.15s;
+}
+
+.delivery-card__btn:hover {
+	background: #172733;
+	color: #ffffff;
+}
+
+/* Freeze cursor when delivery is active */
+body.is-delivered .stage {
+	cursor: default !important;
 }
 
 /* ─── Reduced motion ──────────────────────────────────────────────────────── */

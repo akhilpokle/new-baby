@@ -13,7 +13,7 @@ Vanilla HTML/CSS/JS, no frameworks, no build step. Handed off to Liferay develop
 | File | What it covers |
 |---|---|
 | `docs/architecture.md` | Stage coordinates, z-index stack, CSS→JS token bridge, file map |
-| `docs/animation.md` | Stork follow, scene zoom, binder, clouds, cursor, speech bubble, door pulse |
+| `docs/animation.md` | Intro splash + fly-down, constant-speed stork follow, scene zoom, binder, clouds, cursor, speech bubble, door pulse |
 | `docs/gotchas.md` | Known footguns — **read before touching any animation or layout code** |
 
 ---

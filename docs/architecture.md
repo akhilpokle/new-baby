@@ -34,10 +34,14 @@ across browsers.
 
 | CSS variable | JS constant | Purpose |
 |---|---|---|
-| `--ease-factor` | `EASE_FACTOR` | Stork lerp smoothing |
+| `--stork-speed` | `STORK_SPEED` | Stork flight speed, **px per second** (constant) |
 | `--scene-scale-min` | `SCALE_MIN` | Scene zoom minimum |
 | `--scene-scale-max` | `SCALE_MAX` | Scene zoom maximum |
 | `--sprite-fps` | `SPRITE_FPS` | Wing animation frame rate |
+| `--intro-flydown-duration` | `FLYDOWN_DURATION` | Splash → house descent time (ms) |
+
+`--ease-factor` is **legacy** — the stork moved on a proportional lerp; it now moves
+at the constant `--stork-speed`. The token is left in `tokens.css` but unused by JS.
 
 Changing these in `tokens.css` takes effect on the next **full page reload** only.
 
@@ -53,7 +57,8 @@ Changing these in `tokens.css` takes effect on the next **full page reload** onl
 | Stork | `.stork-wrapper` | 4 | Above scene |
 | Speech bubble | `.speech-bubble` | 6 | Sibling of stork-wrapper, above stork |
 | Cursor arrow | `.cursor-arrow` | 9999 | Always on top |
-| Loader overlay | `.loader-overlay` | 10000 | Covers everything until images load |
+| Intro splash | `.intro-overlay` | 9999 | Splash screen; fades out during fly-down, then removed from DOM |
+| Loader overlay | `.loader-overlay` | 10000 | Covers everything until images load (sits above the splash) |
 
 **Cloud z-ordering is DOM-order dependent.** `.clouds-layer` must appear **after**
 `.sky` and **before** `.scene-layer` in the HTML. Changing DOM order breaks the layering.
@@ -111,3 +116,7 @@ dbs-new-baby/
 | `data-cursor` | `<div>` | Fixed cursor arrow; outside `.stage` |
 | `data-loader` | `<div>` | Overlay; removed from DOM after images load |
 | `data-door-pulse` | `<div>` | Door hint rectangle; inside scene-layer |
+| `data-intro` | `<div>` | Splash overlay (outside `.stage`); fades during fly-down, then removed |
+| `data-intro-stork` | `<img>` | Splash stork; shares its frame `src` with the stage stork |
+| `data-intro-go` | `<button>` | "Let's go" — starts the fly-down |
+| `data-intro-skip` | `<button>` | "Skip" — jumps straight to active |

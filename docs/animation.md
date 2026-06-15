@@ -4,6 +4,70 @@ All animation runs inside a single `requestAnimationFrame` loop in `app.js`.
 There is no animation library. The loop drives: stork follow, scene zoom,
 binder blind, cloud parallax, and speech bubble positioning.
 
+The loop is gated by an **intro state machine** (see below). It only runs the
+live experience once the user has chosen to begin.
+
+---
+
+## Intro experience (splash → fly-down → active)
+
+After the loader clears, the page shows a full-screen splash before the live
+experience starts. A module-level state machine drives this:
+
+```
+introState: 'splash' → 'flying-in' → 'active'
+```
+
+| State | What runs | Loop behaviour |
+|---|---|---|
+| `splash` | Overlay visible, stork hovers centre, wings flapping. No follow, no zoom. | Loop returns early every frame. |
+| `flying-in` | Overlay fades; stork pinned near the top; world scrolls up to meet it. | Loop calls `flyDown(now, dt)` and returns early. |
+| `active` | The existing cursor-follow / zoom / binder / delivery game. | Full loop body runs. |
+
+### Splash overlay
+
+`[data-intro]` is a fixed full-screen overlay (`z-index: 9999`, above the stage,
+below the loader). It holds its own stork `<img>` (`[data-intro-stork]`), the two
+lines of copy, and the **Let's go** / **Skip** buttons. Markup is in `index.html`,
+styles under "Intro splash" in `styles.css`.
+
+- The overlay background is the **intro sky** gradient (`--color-intro-sky-*`,
+  a higher-altitude blue). The stage's own sky beneath it is the lighter
+  "arrived" gradient (`--color-sky-*`).
+- The splash stork shares the same sprite frame as the stage stork (the wing
+  `setInterval` swaps `src` on both), so the hand-off is seamless and same-size
+  (227 × 173, matched exactly in CSS).
+- `cursor: default` is set on the overlay so the buttons are usable despite the
+  global `html { cursor: none }`.
+
+### "Let's go" → the fly-down
+
+`flyDown(now, dt)` runs each frame during `flying-in`:
+
+- **World rises.** The scene starts `FLY_SCROLL` (= `STAGE_H × 2`, "2 scrolls")
+  below its resting place and eases up to 0 with `easeOutCubic` — fast start,
+  gentle settle. `translateY(offset) scale(SCALE_MIN)`.
+- **Clouds rush past.** Clouds use the same offset × `CLOUD_PARALLAX` (1.4), so
+  they travel faster than the scene and sweep up past the stork.
+- **Stork holds at the top.** `storkY` is pinned to `FLY_STORK_Y` (115 — puts the
+  frame's top edge 24 px below the stage top). Only `storkX` tracks the cursor —
+  at the **same constant speed** as active mode (see below), so the stork never
+  lags and there's no catch-up snap when active mode takes over.
+- **Sky cross-fades.** The overlay's gradient fades to opacity 0 over
+  `--intro-flydown-duration` (3500 ms), revealing the lighter stage sky beneath.
+  The overlay's *content* (stork/text/buttons) fades fast (0.3 s) via
+  `.is-leaving` so it doesn't linger as a ghost over the descent.
+
+**Landing (`p >= 1`):** state flips to `active`, `currentSceneScale`/
+`targetSceneScale` are set to `SCALE_MIN`, and the overlay is removed from the DOM.
+The fly-down deliberately ends on `scale(SCALE_MIN)` / no-translate — exactly the
+transforms the active loop expects at far-rest — so there is no pop at the hand-off.
+
+### Skip / reduced motion
+
+**Skip** and `prefers-reduced-motion` both jump straight to `active` and remove the
+overlay (no descent).
+
 ---
 
 ## Stork follow
@@ -20,11 +84,19 @@ so the beak stays in place and the body flips.
 
 **Do not change these offsets without re-measuring the beak position in the PNG.**
 
-### Lerp + boundary clamp
+### Constant-speed movement (NOT a lerp)
+
+The stork flies the straight-line path to the cursor at a **fixed speed**,
+independent of distance. This replaced the old proportional lerp
+(`storkX += (target - stork) * ease`), which lunged when the cursor was far away.
 
 ```js
-storkX += (targetX - storkX) * ease;
-storkY += (targetY - storkY) * ease;
+const dx = targetX - storkX;
+const dy = targetY - storkY;
+const dist = Math.hypot(dx, dy);
+const step = STORK_SPEED * dt / 1000;   // px this frame — dt-based, frame-rate independent
+if (dist <= step) { storkX = targetX; storkY = targetY; }   // arrive exactly, no overshoot
+else { storkX += (dx / dist) * step; storkY += (dy / dist) * step; }
 
 // Clamp so the full sprite stays inside 1366×768:
 // Frame extends 30px left of beak, 197px right; 91px above beak, 82px below.
@@ -32,7 +104,13 @@ storkX = Math.max(30, Math.min(STAGE_W - 197, storkX));
 storkY = Math.max(91, Math.min(STAGE_H - 82,  storkY));
 ```
 
-`ease` comes from `--ease-factor` in `tokens.css` (default 0.055 = gentle lag).
+- `STORK_SPEED` comes from `--stork-speed` in `tokens.css` (px **per second**).
+- **`dt` is required** — `step` must be `speed × dt / 1000`, never a fixed px/frame,
+  or the speed changes with refresh rate. `dt` is capped at 50 ms in the loop.
+- The **same constant-speed model** is used in the fly-down phase (x only, since
+  `storkY` is pinned there). Keep the two in sync — that's what prevents the
+  catch-up snap at the splash → active hand-off.
+- The old `--ease-factor` token is retained but **legacy / unused**.
 
 ### Directional flip — `lastFlip`
 
@@ -67,10 +145,13 @@ during flight. Direction: offset toward the cursor (away from the stork body).
 
 ## Scene zoom
 
-The scene scales around the door position as the stork approaches.
+The scene scales around the door position as the stork approaches. **Driven by the
+stork's position, not the cursor's** — so the zoom only advances as fast as the stork
+actually flies. (Cursor-driven zoom caused a sudden jump the instant the cursor
+landed near the door while the stork was still far away.)
 
 ```js
-const dist       = Math.hypot(targetX - DOOR_X, targetY - DOOR_Y);
+const dist       = Math.hypot(storkX - DOOR_X, storkY - DOOR_Y);  // stork, not cursor
 const normalised = Math.min(dist / MAX_DIST, 1);       // 0 = at door, 1 = far corner
 const t          = smoothstep(1 - normalised);          // invert: near = high t
 targetSceneScale = SCALE_MIN + t * (SCALE_MAX - SCALE_MIN);
@@ -81,6 +162,7 @@ sceneLayer.style.transform = `scale(${currentSceneScale})`;
 `SCALE_MIN` (0.35) and `SCALE_MAX` (1.6) come from `tokens.css`.
 `smoothstep()` gives an S-curve so the zoom accelerates near the door and
 decelerates far away — avoids a jerky linear mapping.
+The `0.06` scale-smoothing is kept on top, so the zoom is doubly gentle.
 
 ### Door coordinates (stage space)
 
@@ -131,8 +213,9 @@ These are y-coordinates in the **original SVG viewBox** (0 0 6068 645):
 ### Scale range and easing
 
 The blind has **its own independent lerp state** (`currentBlindProgress`) separate
-from `currentSceneScale`. This lets it target cursor position directly (no scene-zoom
-lag) while still animating at its own speed.
+from `currentSceneScale`. This lets it target the stork's position directly (no
+scene-zoom lag) while still animating at its own speed. Proximity is measured from
+the **stork** to the house box (not the cursor), matching the zoom.
 
 ```js
 // Module level:
@@ -151,7 +234,7 @@ const slatScaleY          = 1 + (BLIND_CLOSED_SCALE - 1) * (1 - currentBlindProg
 ```
 
 - Uses `targetSceneScale` (not `currentSceneScale`) so the blind fully collapses
-  the moment the cursor reaches the door — not delayed by scene zoom lag.
+  the moment the stork reaches the door — not delayed by scene zoom lag.
 - `BLIND_LERP = 0.14` gives ~250ms visible travel at 60fps — quick but perceptible.
 - **Far from door** (`currentBlindProgress=0`): `slatScaleY=65` — slats fill window.
 - **Near door** (`currentBlindProgress=1`): `slatScaleY=1` — native 1px height.

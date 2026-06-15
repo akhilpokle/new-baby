@@ -5,6 +5,9 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<!-- CMS: page title -->
 	<title>Welcome, Baby — DBS</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com" />
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,700&display=swap" />
 	<link rel="stylesheet" href="assets/css/tokens.css" />
 	<link rel="stylesheet" href="assets/css/styles.css" />
 </head>
@@ -828,7 +831,79 @@
 
 	</main>
 
-	<!-- Custom cursor arrow — fixed viewport position; JS rotates toward door -->
+	<!-- Delivery backdrop — full-screen gradient + blur overlay behind the card -->
+	<div class="delivery-backdrop" data-backdrop aria-hidden="true"></div>
+
+	<!-- Delivery card — slides in from the bottom when the stork reaches the door
+	     (JS toggles .is-visible). Outer wrapper is a 10px decorative frame. -->
+	<!-- CMS: delivery card -->
+	<div class="delivery-card" data-card aria-live="polite" aria-label="Welcome letter">
+		<div class="delivery-card__inner">
+
+			<!-- CMS: delivery card image -->
+			<img class="delivery-card__image" src="assets/img/baby_img.jpg" alt="" aria-hidden="true" />
+
+			<div class="delivery-card__content">
+
+				<!-- CMS: delivery card greeting -->
+				<p class="delivery-card__greeting">Dear Valerie,<br>
+				Congratulation on your little bundle of joy.<br>
+				Here are some tips to ease and support your transition back to work.</p>
+
+				<!-- CMS: delivery card CTA sections -->
+				<div class="delivery-card__section">
+					<p class="delivery-card__section-title">Bonding with your infant</p>
+					<div class="delivery-card__links">
+						<a class="delivery-card__btn" href="#" target="_blank" rel="noopener">Apply for maternity leave</a>
+						<a class="delivery-card__btn" href="#" target="_blank" rel="noopener">Enhanced childcare leave</a>
+					</div>
+				</div>
+
+				<div class="delivery-card__section">
+					<p class="delivery-card__section-title">Medical insurance coverage</p>
+					<div class="delivery-card__links">
+						<a class="delivery-card__btn" href="#" target="_blank" rel="noopener">Newborn medical enrolment</a>
+					</div>
+				</div>
+
+				<div class="delivery-card__section">
+					<p class="delivery-card__section-title">Pregnancy / newborn-related claims</p>
+					<div class="delivery-card__links">
+						<a class="delivery-card__btn" href="#" target="_blank" rel="noopener">Submit baby bonus</a>
+						<a class="delivery-card__btn" href="#" target="_blank" rel="noopener">Submit iflex</a>
+					</div>
+				</div>
+
+				<div class="delivery-card__section">
+					<p class="delivery-card__section-title">Other useful information</p>
+					<div class="delivery-card__links">
+						<a class="delivery-card__btn" href="#" target="_blank" rel="noopener">Nursing room</a>
+						<a class="delivery-card__btn" href="#" target="_blank" rel="noopener">Family deals</a>
+						<a class="delivery-card__btn" href="#" target="_blank" rel="noopener">Contact iOK</a>
+					</div>
+				</div>
+
+			</div>
+		</div>
+	</div>
+
+		<!-- Custom cursor arrow — fixed viewport position; JS rotates toward door -->
+
+	<!-- Intro splash — shown after the loader fades; stork hovers in centre until
+	     the user chooses to begin. JS fades this in, then fades it out (revealing
+	     the lighter sky beneath) while the stork flies down to the house. -->
+	<!-- CMS: intro splash copy -->
+	<div class="intro-overlay" data-intro aria-label="Welcome">
+		<img class="intro-stork" data-intro-stork src="assets/img/FLIGHT.png" alt="" aria-hidden="true" />
+		<div class="intro-copy">
+			<p class="intro-headline">Someone tiny is on their way home.</p>
+			<p class="intro-subline">Move your cursor and help the stork find the front door.</p>
+		</div>
+		<div class="intro-actions">
+			<button type="button" class="intro-btn intro-btn--primary" data-intro-go>Let's go</button>
+			<button type="button" class="intro-btn intro-btn--ghost" data-intro-skip>Skip</button>
+		</div>
+	</div>
 
 	<!-- Loader — shown until all flight-frame images are decoded -->
 	<div class="loader-overlay" data-loader role="status" aria-label="Loading">
