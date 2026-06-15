@@ -265,7 +265,7 @@ html { cursor: none; }
 
 .intro-headline,
 .intro-subline {
-	font-size: 28px;
+	font-size: 24px;
 	font-weight: 500;
 	color: #172733;
 	line-height: var(--line-height-snug);
@@ -312,10 +312,16 @@ html { cursor: none; }
 	opacity: 0;
 	pointer-events: none;
 	transition: opacity 0.6s ease;
+	overflow-y: auto;
+	display: flex;
+	justify-content: center;
+	align-items: flex-start;
+	padding: 80px 16px 40px;
 }
 
 .delivery-backdrop.is-visible {
 	opacity: 1;
+	pointer-events: auto;
 }
 
 /* ─── Delivery card ──────────────────────────────────────────────────────── */
@@ -324,23 +330,22 @@ html { cursor: none; }
 /* the inner container holds the image + content. Scrolls if taller than the    */
 /* viewport.                                                                    */
 .delivery-card {
-	position: fixed;
-	top: 80px;
-	left: 50%;
-	transform: translateX(-50%) translateY(calc(100vh + 100%));
+	transform: translateY(calc(100vh + 100%));
 	transition: transform 1.4s cubic-bezier(0.16, 1, 0.3, 1);
 	width: 640px;
 	max-width: calc(100vw - 32px);
-	max-height: calc(100vh - 120px);
-	overflow-y: auto;
 	background: #ffffff;
-	border: 10px solid #ff8080;   /* decorative frame — swap for DLS token at handoff */
-	border-radius: var(--radius-md);
-	z-index: 9999;
+	border: 10px solid #fff2f2;   /* decorative frame — swap for DLS token at handoff */
+	border-radius: 0;
+	flex-shrink: 0;
 }
 
 .delivery-card.is-visible {
-	transform: translateX(-50%) translateY(0);
+	transform: translateY(0);
+}
+
+.delivery-card__inner {
+	border: 1px solid #ff8080;
 }
 
 /* Image — full width of the card, natural aspect ratio */
@@ -359,7 +364,7 @@ html { cursor: none; }
 
 .delivery-card__greeting {
 	font-size: var(--font-size-sm);
-	color: #455057;
+	color: #172733;
 	line-height: var(--line-height-snug);
 	margin: 0 0 16px;
 }
@@ -388,22 +393,61 @@ html { cursor: none; }
 }
 
 .delivery-card__btn {
-	display: inline-flex;
+	display: flex;
+	min-height: 32px;
+	max-height: 33px;
+	padding: 8px 12px;
+	justify-content: center;
 	align-items: center;
-	padding: 6px 12px;
+	gap: 8px;
+	align-self: stretch;
+	border-radius: var(--semantic-border_radius-action);
+	border: 1px solid var(--semantic-color-border);
 	font-size: var(--font-size-sm);
 	font-weight: 500;
 	color: #172733;
-	border: 1.5px solid #172733;
-	border-radius: var(--radius-sm);
 	text-decoration: none;
-	line-height: var(--line-height-tight);
 	transition: background 0.15s, color 0.15s;
 }
 
 .delivery-card__btn:hover {
 	background: #172733;
 	color: #ffffff;
+}
+
+/* ─── Close button ───────────────────────────────────────────────────────── */
+.close-btn {
+	position: fixed;
+	top: 24px;
+	right: 24px;
+	width: 48px;
+	height: 48px;
+	border-radius: 50%;
+	background: #ffffff;
+	border: none;
+	cursor: pointer;
+	z-index: 10001;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+
+.close-btn::before,
+.close-btn::after {
+	content: '';
+	position: absolute;
+	width: 18px;
+	height: 2px;
+	background: #172733;
+	border-radius: 1px;
+}
+
+.close-btn::before { transform: rotate(45deg); }
+.close-btn::after  { transform: rotate(-45deg); }
+
+.close-btn:hover {
+	background: #f0f0f0;
 }
 
 /* Freeze cursor when delivery is active */

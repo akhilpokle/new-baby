@@ -831,8 +831,9 @@
 
 	</main>
 
-	<!-- Delivery backdrop — full-screen gradient + blur overlay behind the card -->
-	<div class="delivery-backdrop" data-backdrop aria-hidden="true"></div>
+	<!-- Delivery backdrop — full-screen scroll container with gradient + blur overlay.
+	     Card is a child so the backdrop provides the page-level scroll. -->
+	<div class="delivery-backdrop" data-backdrop>
 
 	<!-- Delivery card — slides in from the bottom when the stork reaches the door
 	     (JS toggles .is-visible). Outer wrapper is a 10px decorative frame. -->
@@ -886,6 +887,11 @@
 			</div>
 		</div>
 	</div>
+
+	</div><!-- /delivery-backdrop -->
+
+	<!-- Close button — always visible, top-right corner -->
+	<button class="close-btn" type="button" aria-label="Close"></button>
 
 		<!-- Custom cursor arrow — fixed viewport position; JS rotates toward door -->
 
