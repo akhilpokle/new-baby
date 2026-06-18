@@ -70,7 +70,7 @@
 	--indicator-duration:    2.5s;
 
 	/* Sparkle trail */
-	--sparkle-size:          14px;
+	--sparkle-size:          21px;
 	--sparkle-duration:      0.6s;
 
 	/* Scene — horizontal offset so the door sits at stage centre (x=683).

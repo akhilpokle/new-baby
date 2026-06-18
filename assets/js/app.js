@@ -19,7 +19,7 @@ const introGoBtn   = document.querySelector('[data-intro-go]');
 const introSkipBtn = document.querySelector('[data-intro-skip]');
 
 // ── Sparkle trail ─────────────────────────────────────────────────────────────
-const SPARKLE_COLORS   = ['#FFD700', '#FFB8B8', '#FFFFFF'];
+const SPARKLE_COLORS   = ['#C0392B', '#E74C3C', '#D35400', '#E67E22'];
 let   lastSparkleTime  = 0;
 const SPARKLE_INTERVAL = 50; // ms — one sparkle per 50ms max
 
@@ -182,20 +182,19 @@ let storkY    = startY;
 let targetX   = startX;
 let targetY   = startY;
 let prevX     = startX;
-let prevY     = startY;
-let lastFlip  = 1;  // remembered between frames so stork holds direction when idle
+let prevY       = startY;
+let lastFlip    = 1;    // remembered between frames so stork holds direction when idle
+let cursorClientX = window.innerWidth  / 2;  // last known client-space cursor position
+let cursorClientY = window.innerHeight / 2;
 
 document.addEventListener('mousemove', (e) => {
   // Clamp to stage bounds so the stork target never leaves the 1366×768 space
   targetX = Math.max(0, Math.min(STAGE_W, (e.clientX - stageOffsetX) / stageScale));
   targetY = Math.max(0, Math.min(STAGE_H, (e.clientY - stageOffsetY) / stageScale));
 
-  // Sparkle trail — throttled to one per SPARKLE_INTERVAL ms
-  const now = performance.now();
-  if (now - lastSparkleTime > SPARKLE_INTERVAL) {
-    createSparkle(e.clientX, e.clientY);
-    lastSparkleTime = now;
-  }
+  // Track last cursor position in client space for continuous sparkle emission
+  cursorClientX = e.clientX;
+  cursorClientY = e.clientY;
 });
 
 // Cursor stays visible — the stork follows the cursor rather than replacing it
@@ -347,6 +346,14 @@ function loop(now) {
   // Intro gating: the splash freezes everything; the fly-down runs its own branch.
   if (introState === 'splash')    { requestAnimationFrame(loop); return; }
   if (introState === 'flying-in') { flyDown(now, dt); requestAnimationFrame(loop); return; }
+
+  // — Sparkle emission — continuous, throttled to SPARKLE_INTERVAL ms —
+  // Runs every frame at the last known cursor position so sparkles persist
+  // even when the cursor is stationary.
+  if (now - lastSparkleTime > SPARKLE_INTERVAL) {
+    createSparkle(cursorClientX, cursorClientY);
+    lastSparkleTime = now;
+  }
 
   // — Fly stork toward cursor at a CONSTANT speed (skipped once delivery is triggered) —
   // Straight-line path, fixed px/sec regardless of how far the cursor is, so a big
