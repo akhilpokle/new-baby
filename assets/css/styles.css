@@ -267,7 +267,7 @@ html { cursor: none; }
 .intro-subline {
 	font-size: 24px;
 	font-weight: 500;
-	color: #172733;
+	color: #002d4a;
 	line-height: var(--line-height-snug);
 	margin: 0;
 }
@@ -289,9 +289,11 @@ html { cursor: none; }
 
 /* White pill, dark text — primary call to action. */
 .intro-btn--primary {
-	padding: 14px 28px;
+	height: 40px;
+	padding: 8px 24px;
 	color: #172733;
 	background: #ffffff;
+	border: 1px solid #b0b9c0;
 	border-radius: 999px;
 }
 

@@ -16,7 +16,6 @@ const backdropEl   = document.querySelector('[data-backdrop]');
 const introEl      = document.querySelector('[data-intro]');
 const introStorkEl = document.querySelector('[data-intro-stork]');
 const introGoBtn   = document.querySelector('[data-intro-go]');
-const introSkipBtn = document.querySelector('[data-intro-skip]');
 
 // ── Sparkle trail ─────────────────────────────────────────────────────────────
 const SPARKLE_COLORS   = ['#C0392B', '#E74C3C', '#D35400', '#E67E22'];
@@ -280,13 +279,6 @@ introGoBtn.addEventListener('click', () => {
 
   introEl.classList.add('is-leaving');
   introEl.classList.remove('is-visible');
-});
-
-// "Skip" — jump straight into the live experience (no descent).
-introSkipBtn.addEventListener('click', () => {
-  if (introState !== 'splash') return;
-  introState = 'active';
-  introEl.remove();
 });
 
 // Fly-down frame: world rises to meet the stork; clouds sweep past faster.
