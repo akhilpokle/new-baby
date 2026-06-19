@@ -49,7 +49,7 @@
 
 	/* Intro sky — higher-altitude blue shown during the splash + fly-down.
 	   The intro overlay fades from this gradient to reveal --color-sky-* beneath. */
-	--color-intro-sky-top:    #50BCFF;
+	--color-intro-sky-top:    #A0DBFF;
 	--color-intro-sky-bottom: #C7EAFF;
 
 	/* Intro fly-down — total descent time, splash → house in view (JS reads this). */

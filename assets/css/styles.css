@@ -243,13 +243,46 @@ html { cursor: none; }
 	transition-duration: var(--intro-flydown-duration);
 }
 
-/* Splash content (stork, text, buttons) clears quickly so it doesn't linger as a
-   ghost over the descent — only the sky gradient keeps fading for the full duration. */
-.intro-overlay.is-leaving .intro-stork,
+/* Splash content: text + button clear quickly; stork rises to the top; clouds sweep upward. */
 .intro-overlay.is-leaving .intro-copy,
 .intro-overlay.is-leaving .intro-actions {
 	opacity: 0;
 	transition: opacity 0.3s ease;
+}
+
+/* Stork rises from center to near the top and fades — merges with the live stork
+   that the engine parks at FLY_STORK_Y (≈ top of stage) as flying-in starts. */
+.intro-overlay.is-leaving .intro-stork {
+	opacity: 0;
+	transform: translateY(-320px);
+	transition: opacity 0.6s ease, transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Intro clouds sweep upward faster than the overlay fades — same direction as the
+   scene clouds rising underneath, creating one continuous vertical rush. */
+.intro-overlay.is-leaving .intro-clouds {
+	transform: translateY(-600px);
+	opacity: 0;
+	transition: transform var(--intro-flydown-duration) cubic-bezier(0.25, 0.46, 0.45, 0.94),
+	            opacity calc(var(--intro-flydown-duration) * 0.6) ease;
+}
+
+/* Cloud layer inside the intro overlay — covers the full overlay width, sits
+   behind the stork/copy/button (z-index 0), drifts gently on splash. */
+.intro-clouds {
+	position: absolute;
+	inset: 0;
+	z-index: 0;
+	pointer-events: none;
+	overflow: hidden;
+}
+
+/* Stork, copy, and actions stack above the clouds. */
+.intro-stork,
+.intro-copy,
+.intro-actions {
+	position: relative;
+	z-index: 1;
 }
 
 /* Match the stage stork frame exactly (227×173) for a seamless hand-off. */
