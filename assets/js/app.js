@@ -342,8 +342,8 @@ function loop(now) {
 
   // — Sparkle emission — continuous, throttled to SPARKLE_INTERVAL ms —
   // Runs every frame at the last known cursor position so sparkles persist
-  // even when the cursor is stationary.
-  if (now - lastSparkleTime > SPARKLE_INTERVAL) {
+  // even when the cursor is stationary. Stops once the card is delivered.
+  if (!deliveryTriggered && now - lastSparkleTime > SPARKLE_INTERVAL) {
     createSparkle(cursorClientX, cursorClientY);
     lastSparkleTime = now;
   }

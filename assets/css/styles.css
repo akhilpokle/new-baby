@@ -485,8 +485,9 @@ html { cursor: none; }
 	background: #f0f0f0;
 }
 
-/* Freeze cursor when delivery is active */
-body.is-delivered .stage {
+/* Restore cursor when delivery card is shown — overrides html { cursor: none } for
+   body and all its descendants so the normal pointer reappears over the card. */
+body.is-delivered {
 	cursor: default !important;
 }
 
