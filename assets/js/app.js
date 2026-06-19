@@ -200,10 +200,11 @@ document.addEventListener('mousemove', (e) => {
 
 // ── Scene zoom ────────────────────────────────────────────────────────────────
 // Zoom anchor in stage coordinate space.
-// x=683 = horizontal centre of stage (SVG is centred, house is mid-SVG).
+// x=894 = door position near the right of the stage — the house is anchored to
+//         the right corner (~40px margin), so the SVG is shifted right vs centre.
 // y=768 = bottom of stage (ground level) — keeps the ground pinned to the
 //         screen bottom at every scale value.
-const DOOR_X        = 683;
+const DOOR_X        = 894;
 const DOOR_Y        = 768;
 // Door centre y in unscaled stage coords (SVG y centre=(409+525.941)/2=467 × scale 580/645 + 188).
 // Used for the cursor arrow's directional angle — not for zoom/transform-origin.
@@ -215,10 +216,10 @@ const MAX_DIST = Math.hypot(DOOR_X, DOOR_Y);
 // Main-house bounding box in stage coords — drives the binder/blind reveal.
 // Derived from the house geometry in the inline SVG (roof+wall span x 2564–3196,
 // y 71–527) mapped through the scene transform: stage = svg × (580/645) + offset
-// (offset_x = −1759, offset_y = +188), matching --scene-x-offset in tokens.css.
-//   x: 2564→547, 3196→1115   y: 71→252, 527→662
+// (offset_x = −1548, offset_y = +188), matching --scene-x-offset in tokens.css.
+//   x: 2564→758, 3196→1326   y: 71→252, 527→662   (house anchored to right corner)
 // Recompute these if scene.svg / the house art changes.
-const HOUSE_BOX = { x0: 547, y0: 252, x1: 1115, y1: 662 };
+const HOUSE_BOX = { x0: 758, y0: 252, x1: 1326, y1: 662 };
 
 let currentSceneScale = SCALE_MIN;
 let targetSceneScale  = SCALE_MIN;

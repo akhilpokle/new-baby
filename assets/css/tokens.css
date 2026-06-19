@@ -73,18 +73,20 @@
 	--sparkle-size:          21px;
 	--sparkle-duration:      0.6s;
 
-	/* Scene — horizontal offset so the door sits at stage centre (x=683).
+	/* Scene — horizontal offset so the door sits near the right of the stage (x=894).
+	   The house is anchored to the right corner with a ~40px margin from the edge.
 	   Recalculate if scene.svg changes:
 	     rendered_w = 6068 × (580 / 645) ≈ 5457px
 	     door_rendered_x = door_svg_cx × (580 / 645)
-	     --scene-x-offset = 683 − door_rendered_x
-	   Current door SVG centre x = (2669.57 + 2760.85) / 2 = 2715 → offset = 683 − 2442 = −1759px */
-	--scene-x-offset:        -1759px;
+	     --scene-x-offset = 894 − door_rendered_x
+	   Current door SVG centre x = (2669.57 + 2760.85) / 2 = 2715 → door_rendered_x ≈ 2442
+	     offset = 894 − 2442 = −1548px  (was −1759 when door sat at stage centre x=683) */
+	--scene-x-offset:        -1548px;
 
 	/* Scene — zoom transform-origin (stage px coords)
-	   x=683 = stage centre = door position after offset is applied.
+	   x=894 = door position (right corner) after offset is applied.
 	   y=768 = bottom of stage = ground level.
-	   At any scale: door stays centred, ground stays pinned to screen bottom. */
-	--door-origin-x:         683px;
+	   At any scale: door stays anchored right, ground stays pinned to screen bottom. */
+	--door-origin-x:         894px;
 	--door-origin-y:         768px;
 }
