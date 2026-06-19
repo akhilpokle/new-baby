@@ -67,10 +67,10 @@
 	--cloud-drift-duration:  24s;
 
 	/* Scene — door indicator pulse (targets #indicator in inline SVG) */
-	--indicator-duration:    2.5s;
+	--indicator-duration:    1.2s;
 
 	/* Sparkle trail */
-	--sparkle-size:          21px;
+	--sparkle-size:          16px;
 	--sparkle-duration:      0.6s;
 
 	/* Scene — horizontal offset so the door sits at stage centre (x=683).

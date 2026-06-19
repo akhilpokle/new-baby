@@ -18,14 +18,15 @@ const introStorkEl = document.querySelector('[data-intro-stork]');
 const introGoBtn   = document.querySelector('[data-intro-go]');
 
 // ── Sparkle trail ─────────────────────────────────────────────────────────────
-const SPARKLE_COLORS   = ['#C0392B', '#E74C3C', '#D35400', '#E67E22'];
+const SPARKLE_COLORS   = ['#e95e5e', '#f7ce53', '#B0B8C0'];
+const SPARKLE_GLYPHS   = ['✦', '✦', '●'];  // 2:1 sparkle-to-circle ratio
 let   lastSparkleTime  = 0;
 const SPARKLE_INTERVAL = 50; // ms — one sparkle per 50ms max
 
 function createSparkle(x, y) {
   const el = document.createElement('div');
   el.className   = 'sparkle';
-  el.textContent = '✦';
+  el.textContent = SPARKLE_GLYPHS[Math.floor(Math.random() * SPARKLE_GLYPHS.length)];
   const ox = (Math.random() - 0.5) * 20;
   const oy = (Math.random() - 0.5) * 20;
   const color = SPARKLE_COLORS[Math.floor(Math.random() * SPARKLE_COLORS.length)];

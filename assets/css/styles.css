@@ -166,8 +166,8 @@ html { cursor: none; }
 }
 
 @keyframes sparkle-fade {
-	0%   { transform: scale(1) rotate(0deg);  opacity: 1; }
-	100% { transform: scale(0) rotate(45deg); opacity: 0; }
+	0%   { transform: scale(1)   rotate(0deg);  opacity: 1; filter: blur(0px);   }
+	100% { transform: scale(1.25) rotate(45deg); opacity: 0; filter: blur(4px);   }
 }
 
 
