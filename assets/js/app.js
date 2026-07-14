@@ -9,7 +9,6 @@ const sceneLayer   = document.querySelector('[data-scene-layer]');
 const cloudsLayer  = document.querySelector('[data-clouds-layer]');
 const storkEl      = document.querySelector('[data-stork]');
 const storkFrame   = document.querySelector('[data-stork-frame]');
-const cardEl       = document.querySelector('[data-card]');
 const backdropEl   = document.querySelector('[data-backdrop]');
 
 // Intro splash refs
@@ -329,6 +328,121 @@ function flyDown(now, dt) {
   }
 }
 
+// ── Sketchbook (delivery view) ────────────────────────────────────────────────
+// Two-page flip book shown over the delivery backdrop once the stork arrives.
+// One leaf turns at a time; a lock blocks input during the flip. z-index is set
+// here (not in CSS) so the turning leaf and the two page-stacks layer correctly.
+const leafEls   = Array.from(document.querySelectorAll('.leaf'));
+const captionEl = document.querySelector('[data-sketchbook-caption]');
+const prevBtns  = document.querySelectorAll('[data-sketchbook-prev]');
+const nextBtns  = document.querySelectorAll('[data-sketchbook-next]');
+
+const LEAVES   = leafEls.length;                // 4 sheets
+const MAX_LEAF  = LEAVES - 1;                    // last spread keeps the closing note on the right
+// Lock duration = the flip's visible length, so input re-opens as the page lands.
+// Reduced motion turns pages instantly (see CSS), so drop the lock to match.
+const FLIP_MS   = reducedMotion ? 0 : (parseFloat(css.getPropertyValue('--sketchbook-flip-duration')) || 700);
+const bookEl    = document.querySelector('[data-sketchbook-book]');
+
+// Caption per spread (index = currentLeaf; 0 = closed on the cover). aria-live.
+const CAPTIONS = ['Cover', 'Welcome & bonding', 'Insurance & claims', 'More info & farewell'];
+
+let currentLeaf = 0;      // how many leaves are turned to the left
+let isFlipping  = false;  // input lock while a page is mid-turn
+
+// Layer the leaves: flipped ones stack on the left (newest on top), unflipped on
+// the right (lowest index on top). The two ranges never overlap.
+function applyLeafZ() {
+  leafEls.forEach((leaf) => {
+    const i = Number(leaf.dataset.leaf);          // 1-based sheet number
+    leaf.style.zIndex = (i <= currentLeaf) ? (LEAVES + i) : (LEAVES - i + 1);
+  });
+}
+
+// Update the caption + arrow disabled states for the current spread.
+function updateSketchNav() {
+  if (captionEl) captionEl.textContent = CAPTIONS[currentLeaf] || `Spread ${currentLeaf}`;
+  prevBtns.forEach((b) => { if (b.tagName === 'BUTTON') b.disabled = currentLeaf === 0; });
+  nextBtns.forEach((b) => { if (b.tagName === 'BUTTON') b.disabled = currentLeaf === MAX_LEAF; });
+}
+
+// Low-level flip of one sheet: mutates state + is-flipped, returns the moving
+// leaf (or null at a bound). Shared by the user turn and the instant open.
+function flipSheet(dir) {
+  const target = currentLeaf + dir;
+  if (target < 0 || target > MAX_LEAF) return null;   // at a bound — no move
+  // next → the leaf about to turn (currentLeaf+1); prev → the one turning back.
+  const movingIndex = dir > 0 ? currentLeaf + 1 : currentLeaf;
+  const movingLeaf  = leafEls.find((l) => Number(l.dataset.leaf) === movingIndex) || null;
+  currentLeaf = target;
+  if (movingLeaf) movingLeaf.classList.toggle('is-flipped', dir > 0);
+  return movingLeaf;
+}
+
+// Turn one page at the normal speed. dir = +1 (next) or -1 (prev).
+function turnPage(dir) {
+  if (isFlipping) return;                          // ignore input during a flip
+  const moving = flipSheet(dir);
+  if (!moving) return;                             // already at a bound
+  isFlipping = true;
+  moving.style.zIndex = 100;                       // lift above both stacks mid-turn
+  updateSketchNav();
+  // Settle z-index and release the lock once the turn finishes.
+  setTimeout(() => { applyLeafZ(); isFlipping = false; }, FLIP_MS);
+}
+
+const nextPage = () => turnPage(1);
+const prevPage = () => turnPage(-1);
+
+prevBtns.forEach((b) => b.addEventListener('click', prevPage));
+nextBtns.forEach((b) => b.addEventListener('click', nextPage));
+
+// Keyboard: ← / → turn pages, but only while the book is open.
+document.addEventListener('keydown', (e) => {
+  if (!backdropEl || !backdropEl.classList.contains('is-visible')) return;
+  if (e.key === 'ArrowRight')     nextPage();
+  else if (e.key === 'ArrowLeft') prevPage();
+});
+
+// Reset the book to its cover.
+function resetSketchbook() {
+  leafEls.forEach((l) => l.classList.remove('is-flipped'));
+  currentLeaf = 0;
+  isFlipping  = false;
+  applyLeafZ();
+  updateSketchNav();
+}
+
+// Open the delivery view directly on the first spread (page 1 | 2), no animation.
+// .is-instant + a forced reflow apply the opening flip with transitions off, so
+// the book simply appears open; user-driven turns animate normally afterward.
+function openSketchbook() {
+  resetSketchbook();
+  const firstLeaf = leafEls.find((l) => Number(l.dataset.leaf) === 1);
+  if (!firstLeaf) return;
+  if (bookEl) bookEl.classList.add('is-instant');
+  firstLeaf.classList.add('is-flipped');
+  currentLeaf = 1;
+  applyLeafZ();
+  updateSketchNav();
+  if (bookEl) {
+    void bookEl.offsetWidth;                 // flush the flipped state with no transition
+    bookEl.classList.remove('is-instant');
+  }
+}
+
+// Close button: dismiss the delivery backdrop and reset the book to the cover.
+// (Re-opening isn't wired — delivery latches once per session in this prototype.)
+const closeBtn = document.querySelector('.close-btn');
+if (closeBtn) {
+  closeBtn.addEventListener('click', () => {
+    if (backdropEl) backdropEl.classList.remove('is-visible');
+    resetSketchbook();
+  });
+}
+
+resetSketchbook();  // initial layering + caption
+
 // ── rAF loop ──────────────────────────────────────────────────────────────────
 let lastTime = performance.now();
 
@@ -384,8 +498,8 @@ function loop(now) {
       Math.hypot(storkX - DOOR_X, storkY - apparentDoorY) < DELIVERY_ZONE_PX) {
     deliveryTriggered = true;
     document.body.classList.add('is-delivered');
-    if (cardEl) cardEl.classList.add('is-visible');
     if (backdropEl) backdropEl.classList.add('is-visible');
+    openSketchbook();   // reveal the flip book on the first spread
   }
 
   // — Velocity for directional rotation —

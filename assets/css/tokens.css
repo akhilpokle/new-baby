@@ -87,4 +87,28 @@
 	   At any scale: door stays centred, ground stays pinned to screen bottom. */
 	--door-origin-x:         683px;
 	--door-origin-y:         768px;
+
+	/* ─── Sketchbook ──────────────────────────────────────────────────────────
+	   Two-page open-book that replaces the delivery card. It opens over the same
+	   blurred --delivery backdrop when the stork reaches the door. Desktop only.
+	   Each leaf is one sheet (front = right page, back = left page); one leaf
+	   flips at a time via a 3D rotateY around the spine. */
+
+	/* Page + book geometry. Book width = 2 × page width (left + right page). */
+	--sketchbook-page-w:       380px;
+	--sketchbook-page-h:       520px;
+	--sketchbook-perspective:  2400px;  /* 3D depth of the flip — larger = flatter */
+
+	/* Flip timing. ease-in-out so the page accelerates off the spine and settles. */
+	--sketchbook-flip-duration: 700ms;
+	--sketchbook-flip-ease:     cubic-bezier(0.645, 0.045, 0.355, 1);
+
+	/* Colours — paper-cream pages, pink cover echoing the delivery-card frame. */
+	--sketchbook-page-bg:      #fffdf7;  /* warm paper */
+	--sketchbook-page-edge:    #ece7db;  /* page border / stacked-edge line */
+	--sketchbook-cover-bg:     #fff2f2;  /* cover face — matches card frame pink */
+	--sketchbook-cover-accent: #ff8080;  /* cover inner rule — matches card accent */
+	--sketchbook-spine-shadow: rgba(23, 39, 51, 0.18); /* gradient toward the spine */
+	--sketchbook-page-pad:     28px;     /* inner padding on each page */
+	--sketchbook-zone-w:       44px;     /* width of the edge click-zones (page turn) */
 }
