@@ -428,6 +428,25 @@ html { cursor: none; }
 /* Back face pre-rotated 180° so it reads upright once the leaf turns. */
 .leaf__face--back { transform: rotateY(180deg); }
 
+/* Page edge — thin strip at the leaf's outer border (opposite the spine), folded
+   90° into the leaf's own 3D space. Rigidly attached, so it rotates WITH the leaf:
+   a hairline at rest (0°/180°), widening into a visible shaded strip as the page
+   turns edge-on (~90°) — giving the flip physical thickness. No backface-visibility
+   (stays visible from both sides through the whole turn, unlike the faces).
+   Inset top/bottom by the page's own corner radius so the straight strip only
+   spans the STRAIGHT section of the outer edge — the rounded corners curve inward
+   past that, so a full-height strip would jut out past the curve. */
+.leaf__edge {
+	position: absolute;
+	top: var(--sketchbook-radius);
+	left: 100%;
+	width: var(--sketchbook-edge-thickness);
+	height: calc(100% - (var(--sketchbook-radius) * 2));
+	background: var(--sketchbook-edge-color);
+	transform-origin: left center;
+	transform: rotateY(90deg);
+}
+
 /* Instant open: app.js adds .is-instant so the opening layout applies with no
    animation (removed the same frame). */
 .sketchbook__book.is-instant .leaf,
