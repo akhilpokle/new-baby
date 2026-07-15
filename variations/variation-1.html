@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Variation 1 — Simple Flip · Welcome, Baby</title>
+	<!--
+		VARIATION 1 — the "simple flip".
+		A minimal two-page book: only one spread (2 pages) is visible at a time.
+		Next/prev flips a single sheet over the spine to reveal the next spread.
+		No page-stack thickness, no edge zones, no shading — deliberately bare.
+		Self-contained (inline CSS/JS); reuses the shared card art in ../assets/img.
+	-->
+	<style>
+		:root {
+			/* Flip feel — tunable per variation, mirrors the main prototype's tokens. */
+			--page-w:        320px;
+			--page-h:        400px;
+			--radius:        16px;
+			--perspective:   1200px;                              /* smaller = deeper turn */
+			--flip-duration: 700ms;
+			--flip-ease:     cubic-bezier(0.645, 0.045, 0.355, 1);
+			--page-bg:       #fffdf7;                             /* warm paper */
+			--arrow-size:    48px;
+			--arrow-gap:     24px;
+
+			--ink:           #172733;
+			--backdrop-a:    #dfeaf2;
+			--backdrop-b:    #f4ede4;
+		}
+
+		* { box-sizing: border-box; }
+
+		body {
+			margin: 0;
+			min-height: 100vh;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			gap: 28px;
+			font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+			color: var(--ink);
+			background: linear-gradient(135deg, var(--backdrop-a), var(--backdrop-b));
+		}
+
+		.variation-tag {
+			position: fixed;
+			top: 20px;
+			left: 20px;
+			font-size: 13px;
+			letter-spacing: 0.04em;
+			text-transform: uppercase;
+			opacity: 0.55;
+		}
+
+		/* Book — two pages wide; provides the 3D perspective for the flipping sheet. */
+		.book {
+			position: relative;
+			width: calc(var(--page-w) * 2);
+			height: var(--page-h);
+			perspective: var(--perspective);
+		}
+
+		/* Base pages sit behind the leaves: card-open is always the far-left page,
+		   card-end always the far-right page. The leaves flip on top of them. */
+		.page-base {
+			position: absolute;
+			top: 0;
+			width: var(--page-w);
+			height: 100%;
+			z-index: 0;
+			overflow: hidden;
+			background: var(--page-bg);
+		}
+		.page-base--left {
+			left: 0;
+			border-radius: var(--radius) 0 0 var(--radius);
+		}
+		.page-base--right {
+			left: 50%;
+			border-radius: 0 var(--radius) var(--radius) 0;
+		}
+
+		/* A leaf is one sheet over the RIGHT half; its spine is the book centre (its
+		   own left edge). Flipping rotates it left onto the other half. z-index is
+		   assigned by JS so the stack layers correctly. */
+		.leaf {
+			position: absolute;
+			top: 0;
+			left: 50%;
+			width: var(--page-w);
+			height: 100%;
+			transform-origin: left center;
+			transform-style: preserve-3d;
+			transition: transform var(--flip-duration) var(--flip-ease);
+		}
+		.leaf.is-flipped {
+			transform: rotateY(-180deg);
+		}
+
+		/* Two faces per leaf: front = right page, back = left page (pre-rotated 180°
+		   so it reads upright once turned). backface-visibility hides the reverse. */
+		.leaf__face {
+			position: absolute;
+			inset: 0;
+			overflow: hidden;
+			backface-visibility: hidden;
+			background: var(--page-bg);
+		}
+		.leaf__face--front {
+			border-radius: 0 var(--radius) var(--radius) 0;
+		}
+		.leaf__face--back {
+			transform: rotateY(180deg);
+			border-radius: var(--radius) 0 0 var(--radius);
+		}
+
+		.page-img {
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+			display: block;
+		}
+
+		/* Arrows flank the book, vertically centred. */
+		.arrow {
+			position: absolute;
+			top: 50%;
+			transform: translateY(-50%);
+			width: var(--arrow-size);
+			height: var(--arrow-size);
+			border-radius: 50%;
+			border: none;
+			background: #ffffff;
+			box-shadow: 0 4px 14px rgba(23, 39, 51, 0.20);
+			cursor: pointer;
+			z-index: 70;
+			transition: background 0.15s, box-shadow 0.15s;
+		}
+		.arrow--prev { left:  calc(-1 * (var(--arrow-size) + var(--arrow-gap))); }
+		.arrow--next { right: calc(-1 * (var(--arrow-size) + var(--arrow-gap))); }
+		.arrow:hover { background: #f4f4f4; box-shadow: 0 6px 18px rgba(23, 39, 51, 0.26); }
+		.arrow:disabled { opacity: 0.35; cursor: default; box-shadow: none; }
+
+		/* Chevron drawn from a rotated corner border. */
+		.arrow::before {
+			content: '';
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			width: 10px;
+			height: 10px;
+			border-top: 2px solid var(--ink);
+			border-right: 2px solid var(--ink);
+		}
+		.arrow--prev::before { transform: translate(-30%, -50%) rotate(-135deg); }
+		.arrow--next::before { transform: translate(-70%, -50%) rotate(45deg); }
+
+		.counter {
+			font-size: 14px;
+			letter-spacing: 0.08em;
+			opacity: 0.6;
+		}
+
+		@media (prefers-reduced-motion: reduce) {
+			.leaf { transition: none; }
+		}
+	</style>
+</head>
+<body>
+	<div class="variation-tag">Variation 1 · simple flip</div>
+
+	<!-- data-book: the flip surface. Base pages + 3 flipping leaves. -->
+	<div class="book" data-book>
+		<!-- Far pages, always behind the leaves. -->
+		<div class="page-base page-base--left">
+			<img class="page-img" src="../assets/img/card-open.png" alt="Congratulations">
+		</div>
+		<div class="page-base page-base--right">
+			<img class="page-img" src="../assets/img/card-end.png" alt="Closing">
+		</div>
+
+		<!-- Leaves 1–3. front = right page of a spread, back = left page of the next. -->
+		<div class="leaf" data-leaf="1">
+			<div class="leaf__face leaf__face--front"><img class="page-img" src="../assets/img/card-1.png" alt="More time"></div>
+			<div class="leaf__face leaf__face--back"><img class="page-img" src="../assets/img/card-2.png" alt="Medical protection"></div>
+		</div>
+		<div class="leaf" data-leaf="2">
+			<div class="leaf__face leaf__face--front"><img class="page-img" src="../assets/img/card-3.png" alt="Claims"></div>
+			<div class="leaf__face leaf__face--back"><img class="page-img" src="../assets/img/card-4.png" alt="Nursing room"></div>
+		</div>
+		<div class="leaf" data-leaf="3">
+			<div class="leaf__face leaf__face--front"><img class="page-img" src="../assets/img/card-5.png" alt="Discover benefits"></div>
+			<div class="leaf__face leaf__face--back"><img class="page-img" src="../assets/img/card-6.png" alt="Be cared for"></div>
+		</div>
+
+		<button class="arrow arrow--prev" data-prev aria-label="Previous spread"></button>
+		<button class="arrow arrow--next" data-next aria-label="Next spread"></button>
+	</div>
+
+	<div class="counter" data-counter>1 / 4</div>
+
+	<script>
+		'use strict';
+
+		// State is just how many leaves are turned to the left (0 = spread 1 … 3 = spread 4).
+		const leafEls = Array.from(document.querySelectorAll('.leaf'));
+		const prevBtn = document.querySelector('[data-prev]');
+		const nextBtn = document.querySelector('[data-next]');
+		const counter = document.querySelector('[data-counter]');
+
+		const LEAVES = leafEls.length;           // 3 flipping sheets
+		const SPREADS = LEAVES + 1;              // 4 spreads
+		const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		const cssDur = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--flip-duration'));
+		const FLIP_MS = reducedMotion ? 0 : (cssDur || 700);
+
+		let turned = 0;        // leaves flipped to the left
+		let isFlipping = false; // input lock during a turn
+
+		// Layer the leaves: unflipped stack with the lowest on top (current right page);
+		// flipped stack with the highest on top (most-recently turned). Bases stay at 0.
+		function applyZ() {
+			leafEls.forEach((leaf) => {
+				const i = Number(leaf.dataset.leaf);
+				leaf.style.zIndex = (i <= turned) ? (LEAVES + i) : (LEAVES - i + 1);
+			});
+		}
+
+		function updateNav() {
+			prevBtn.disabled = turned <= 0;
+			nextBtn.disabled = turned >= LEAVES;
+			counter.textContent = (turned + 1) + ' / ' + SPREADS;
+		}
+
+		// dir = +1 (next) or -1 (prev). Flip one sheet, then settle after the turn.
+		function turnPage(dir) {
+			if (isFlipping) return;
+			const target = turned + dir;
+			if (target < 0 || target > LEAVES) return;   // at a bound
+
+			// next → the leaf about to turn (turned+1); prev → the one turning back (turned).
+			const movingIndex = dir > 0 ? turned + 1 : turned;
+			const moving = leafEls.find((l) => Number(l.dataset.leaf) === movingIndex);
+			turned = target;
+
+			isFlipping = true;
+			moving.classList.toggle('is-flipped', dir > 0);
+			moving.style.zIndex = 100;              // lift above everything mid-turn
+			updateNav();
+			setTimeout(() => { applyZ(); isFlipping = false; }, FLIP_MS);
+		}
+
+		nextBtn.addEventListener('click', () => turnPage(1));
+		prevBtn.addEventListener('click', () => turnPage(-1));
+		document.addEventListener('keydown', (e) => {
+			if (e.key === 'ArrowRight')     turnPage(1);
+			else if (e.key === 'ArrowLeft') turnPage(-1);
+		});
+
+		applyZ();
+		updateNav();
+	</script>
+</body>
+</html>

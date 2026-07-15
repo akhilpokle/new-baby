@@ -88,27 +88,36 @@
 	--door-origin-x:         683px;
 	--door-origin-y:         768px;
 
-	/* ─── Sketchbook ──────────────────────────────────────────────────────────
-	   Two-page open-book that replaces the delivery card. It opens over the same
-	   blurred --delivery backdrop when the stork reaches the door. Desktop only.
-	   Each leaf is one sheet (front = right page, back = left page); one leaf
-	   flips at a time via a 3D rotateY around the spine. */
+	/* ─── Sketchbook — fanned-deck flip book ──────────────────────────────────
+	   Two-page open book that replaces the delivery card, opening over the blurred
+	   --delivery backdrop when the stork reaches the door. Desktop only. Structure:
+	   card-open (left base) + 3 flipping leaves (front = right page / back = left
+	   page) + card-end (right base), fanned so upcoming pages step out on the right
+	   and read pages pile into left-side slivers; every turned page lands flush at
+	   the spine (x = page-w). Positions live in the app.js SCENES table. */
 
-	/* Page + book geometry. Book width = 2 × page width (left + right page). */
-	--sketchbook-page-w:       380px;
-	--sketchbook-page-h:       520px;
-	--sketchbook-perspective:  2400px;  /* 3D depth of the flip — larger = flatter */
+	/* Page geometry. Slot-0 page = native card art size (320×400); a 1.25 height
+	   ratio (derived in JS) keeps narrower fan pages proportionally shorter. */
+	--sketchbook-page-w:        320px;
+	--sketchbook-page-h:        400px;
+	--sketchbook-radius:        16px;    /* rounded OUTER corners of each page */
+	--sketchbook-perspective:   1200px;  /* 3D depth of the flip — smaller = deeper turn */
 
-	/* Flip timing. ease-in-out so the page accelerates off the spine and settles. */
+	/* Flip timing — one smooth transition per turn (width/left/height/transform). */
 	--sketchbook-flip-duration: 700ms;
 	--sketchbook-flip-ease:     cubic-bezier(0.645, 0.045, 0.355, 1);
 
-	/* Colours — paper-cream pages, pink cover echoing the delivery-card frame. */
-	--sketchbook-page-bg:      #fffdf7;  /* warm paper */
-	--sketchbook-page-edge:    #ece7db;  /* page border / stacked-edge line */
-	--sketchbook-cover-bg:     #fff2f2;  /* cover face — matches card frame pink */
-	--sketchbook-cover-accent: #ff8080;  /* cover inner rule — matches card accent */
-	--sketchbook-spine-shadow: rgba(23, 39, 51, 0.18); /* gradient toward the spine */
-	--sketchbook-page-pad:     28px;     /* inner padding on each page */
-	--sketchbook-zone-w:       44px;     /* width of the edge click-zones (page turn) */
+	/* Framing — white paper backdrop masks mid-flip spine gaps; soft even shadow. */
+	--sketchbook-paper-bg:      #ffffff;
+	--sketchbook-card-shadow:   rgba(0, 0, 0, 0.10);   /* #000 @ 10%, blur only, no offset */
+
+	/* Navigation — flanking arrows + edge click-zones. */
+	--sketchbook-zone-w:        44px;
+	--sketchbook-arrow-size:    48px;
+	--sketchbook-arrow-gap:     24px;
+
+	/* Spread's max visual extent across scenes (spine at page-w = 320); the arrows
+	   anchor to these so they stay put as the fan grows/shrinks. */
+	--sketchbook-content-left:  -12px;
+	--sketchbook-content-right: 652px;
 }

@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Variation 2 — Fanned Deck · Welcome, Baby</title>
+	<!--
+		VARIATION 2 — fanned-deck flip book (multi-scene, both arrows).
+		Structure: 3 flipping leaves + 2 standalone base pages, over a white backdrop.
+		  card-open  — standalone left base
+		  Leaf A     — card-1 (front / right) + card-2 (back / left)
+		  Leaf B     — card-3 (front) + card-4 (back)
+		  Leaf C     — card-5 (front) + card-6 (back)
+		  card-end   — standalone right base
+		4 spreads / 3 flips. Right arrow advances (flips A, then B, then C), left
+		reverses. Every top page lands flush at the spine (x=320); read pages pile
+		into left-side slivers, upcoming pages fan out on the right.
+		A white paper rectangle sits behind all cards so any non-flush gap during a
+		flip reads as paper, not the page background.
+
+		STEP 1 of build: structure + Scene-1 rest layout only. The state machine that
+		drives scenes 2–4 is added in a later step; arrows are inert for now.
+	-->
+	<style>
+		:root {
+			--shadow: rgba(0, 0, 0, 0.05);   /* #000 @ 5% */
+			--ink:    #172733;
+			--bg-a:   #dfeaf2;
+			--bg-b:   #f4ede4;
+			--arrow-size: 48px;
+			--arrow-gap:  24px;
+			/* Max visual extent of the spread across all scenes (spine at 320):
+			   left slivers reach -12 (Scene 4), the Scene-1 fan reaches 652.
+			   Arrows anchor to these so they stay put as the spread grows/shrinks. */
+			--content-left:  -12px;
+			--content-right: 652px;
+			--flip-duration: 700ms;
+			--flip-ease:     cubic-bezier(0.645, 0.045, 0.355, 1);
+			--perspective:   1200px;
+			--radius:        16px;
+		}
+
+		* { box-sizing: border-box; }
+
+		body {
+			margin: 0;
+			min-height: 100vh;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+			color: var(--ink);
+			background: linear-gradient(135deg, var(--bg-a), var(--bg-b));
+		}
+
+		.variation-tag {
+			position: fixed;
+			top: 20px;
+			left: 20px;
+			font-size: 13px;
+			letter-spacing: 0.04em;
+			text-transform: uppercase;
+			opacity: 0.55;
+		}
+
+		/* Book stage. Spine at x=320. Width 640 puts the book's centre on the spine —
+		   which is also the spread's centre (content spans -12..652) — so the spread
+		   sits centred in the viewport; the ±12 overflow is symmetric. */
+		.book {
+			position: relative;
+			width: 640px;
+			height: 400px;
+			perspective: var(--perspective);
+		}
+
+		/* White paper backdrop — spans the resting two-page spread, behind every card,
+		   so transient non-flush gaps mid-flip show paper instead of the background. */
+		.paper-backdrop {
+			position: absolute;
+			top: 50%;
+			left: 0;
+			width: 640px;
+			height: 400px;
+			transform: translateY(-50%);
+			background: #ffffff;
+			border-radius: var(--radius);
+			z-index: 1;
+		}
+
+		/* Leaves and standalone pages share one positioning model: explicit width +
+		   height (height = width × 1.25, the card art's ratio, so narrower cards are
+		   proportionally shorter and read as an inset fan), vertically centred on the
+		   spine midline. width/left/height/transform all transition for the flip. */
+		.leaf,
+		.page {
+			position: absolute;
+			top: 50%;
+			transform: translateY(-50%);
+			transition:
+				left      var(--flip-duration) var(--flip-ease),
+				width     var(--flip-duration) var(--flip-ease),
+				height    var(--flip-duration) var(--flip-ease),
+				transform var(--flip-duration) var(--flip-ease);
+		}
+
+		/* A leaf is one flipping sheet: front (right page) + back (left page). Spine =
+		   the leaf's own left edge (transform-origin: left center); rotateY(-180deg)
+		   turns it onto the left half. backface-visibility hides each face past 90°. */
+		.leaf {
+			transform-style: preserve-3d;
+			transform-origin: left center;
+		}
+		.leaf__face {
+			position: absolute;
+			inset: 0;
+			overflow: hidden;
+			backface-visibility: hidden;
+		}
+		/* Back face is pre-rotated 180° so it reads upright once the leaf turns. */
+		.leaf__face--back { transform: rotateY(180deg); }
+
+		/* Card image fills its box; ratio matches height=width×1.25 so cover = no crop. */
+		.card-img {
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+			display: block;
+			box-shadow: 0 0 4px var(--shadow);
+		}
+		.card-img--right { border-radius: 0 var(--radius) var(--radius) 0; }  /* right page */
+		.card-img--left  { border-radius: var(--radius) 0 0 var(--radius); }  /* left page  */
+
+		/* ── Scene 1 rest layout ──
+		   Right fan slots from the spine: 320/310/300/290 wide, right edges +4 apart.
+		   z: nearer the spine sits on top (card-1 highest). card-open on the left. */
+		.page--open { left: 0;    width: 320px; height: 400px;   z-index: 30; }
+		.leaf--a    { left: 320px; width: 320px; height: 400px;   z-index: 29; }
+		.leaf--b    { left: 334px; width: 310px; height: 387.5px; z-index: 28; }
+		.leaf--c    { left: 348px; width: 300px; height: 375px;   z-index: 27; }
+		.page--end  { left: 362px; width: 290px; height: 362.5px; z-index: 26; }
+
+		/* Nav arrows — flank the book, vertically centred. Inert until the state
+		   machine step; disabled styling ready for the bounds. */
+		.arrow {
+			position: absolute;
+			top: 50%;
+			transform: translateY(-50%);
+			width: var(--arrow-size);
+			height: var(--arrow-size);
+			border-radius: 50%;
+			border: none;
+			background: #ffffff;
+			box-shadow: 0 4px 14px rgba(23, 39, 51, 0.20);
+			cursor: pointer;
+			z-index: 80;
+			transition: opacity 0.15s;
+		}
+		/* Flank the spread's max extent (not the book box) so they don't drift. */
+		.arrow--prev { left: calc(var(--content-left) - var(--arrow-gap) - var(--arrow-size)); }
+		.arrow--next { left: calc(var(--content-right) + var(--arrow-gap)); }
+		.arrow:disabled { opacity: 0.35; cursor: default; box-shadow: none; }
+
+		/* Chevron drawn from a rotated corner border. */
+		.arrow::before {
+			content: '';
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			width: 10px;
+			height: 10px;
+			border-top: 2px solid var(--ink);
+			border-right: 2px solid var(--ink);
+		}
+		.arrow--prev::before { transform: translate(-30%, -50%) rotate(-135deg); }
+		.arrow--next::before { transform: translate(-70%, -50%) rotate(45deg); }
+
+		/* Reduced motion — turn pages instantly (JS drops the lock to match). */
+		@media (prefers-reduced-motion: reduce) {
+			.leaf,
+			.page { transition: none; }
+		}
+	</style>
+</head>
+<body>
+	<div class="variation-tag">Variation 2 · fanned deck</div>
+
+	<div class="book" data-book>
+		<!-- White paper behind everything (masks mid-flip gaps at the spine). -->
+		<div class="paper-backdrop"></div>
+
+		<!-- Left standalone base page. -->
+		<div class="page page--open" data-card="open">
+			<img class="card-img card-img--left" src="../assets/img/card-open.png" alt="Congratulations">
+		</div>
+
+		<!-- Three flipping leaves: front = right page, back = left page. -->
+		<div class="leaf leaf--a" data-leaf="a">
+			<div class="leaf__face leaf__face--front"><img class="card-img card-img--right" src="../assets/img/card-1.png" alt="More time"></div>
+			<div class="leaf__face leaf__face--back"><img class="card-img card-img--left" src="../assets/img/card-2.png" alt="Medical protection"></div>
+		</div>
+		<div class="leaf leaf--b" data-leaf="b">
+			<div class="leaf__face leaf__face--front"><img class="card-img card-img--right" src="../assets/img/card-3.png" alt="Claims"></div>
+			<div class="leaf__face leaf__face--back"><img class="card-img card-img--left" src="../assets/img/card-4.png" alt="Nursing room"></div>
+		</div>
+		<div class="leaf leaf--c" data-leaf="c">
+			<div class="leaf__face leaf__face--front"><img class="card-img card-img--right" src="../assets/img/card-5.png" alt="Discover benefits"></div>
+			<div class="leaf__face leaf__face--back"><img class="card-img card-img--left" src="../assets/img/card-6.png" alt="Be cared for"></div>
+		</div>
+
+		<!-- Right standalone base page. -->
+		<div class="page page--end" data-card="end">
+			<img class="card-img card-img--right" src="../assets/img/card-end.png" alt="Closing">
+		</div>
+
+		<!-- Nav arrows — inert until the state-machine step. -->
+		<button class="arrow arrow--prev" data-prev aria-label="Previous"></button>
+		<button class="arrow arrow--next" data-next aria-label="Next"></button>
+	</div>
+
+	<script>
+		'use strict';
+
+		// ── Per-scene target table (single source of truth) ──────────────────────
+		// One entry per positionable element; index 0 = Scene 1 … 3 = Scene 4.
+		// left/w are the ELEMENT box in book coordinates. Flipped leaves (rot -180)
+		// pivot on their left edge, so their box `left` is the VISUAL right edge
+		// (visualLeft + width) — that's what lands the mirrored back face flush on
+		// the left. height is derived (w × 1.25, the card art's ratio). z is the
+		// resting stack order (nearer the spine on top; boosted mid-flip later).
+		var SCENES = {
+			open: [                                   // standalone left base (never flips)
+				{ left:   0, w: 320, rot: 0, z: 30 },  // S1 left slot 0 (flush)
+				{ left:  -4, w: 310, rot: 0, z: 29 },  // S2 left slot 1
+				{ left:  -8, w: 300, rot: 0, z: 28 },  // S3 left slot 2
+				{ left: -12, w: 290, rot: 0, z: 27 },  // S4 left slot 3
+			],
+			a: [                                      // leaf A: card-1 front / card-2 back
+				{ left: 320, w: 320, rot:    0, z: 30 },  // S1 right slot 0
+				{ left: 320, w: 320, rot: -180, z: 30 },  // S2 flipped → left slot 0
+				{ left: 306, w: 310, rot: -180, z: 29 },  // S3 left slot 1
+				{ left: 292, w: 300, rot: -180, z: 28 },  // S4 left slot 2
+			],
+			b: [                                      // leaf B: card-3 front / card-4 back
+				{ left: 334, w: 310, rot:    0, z: 29 },  // S1 right slot 1
+				{ left: 320, w: 320, rot:    0, z: 30 },  // S2 right slot 0
+				{ left: 320, w: 320, rot: -180, z: 30 },  // S3 flipped → left slot 0
+				{ left: 306, w: 310, rot: -180, z: 29 },  // S4 left slot 1
+			],
+			c: [                                      // leaf C: card-5 front / card-6 back
+				{ left: 348, w: 300, rot:    0, z: 28 },  // S1 right slot 2
+				{ left: 334, w: 310, rot:    0, z: 29 },  // S2 right slot 1
+				{ left: 320, w: 320, rot:    0, z: 30 },  // S3 right slot 0
+				{ left: 320, w: 320, rot: -180, z: 30 },  // S4 flipped → left slot 0
+			],
+			end: [                                    // standalone right base (never flips)
+				{ left: 362, w: 290, rot: 0, z: 27 },  // S1 right slot 3
+				{ left: 348, w: 300, rot: 0, z: 28 },  // S2 right slot 2
+				{ left: 334, w: 310, rot: 0, z: 29 },  // S3 right slot 1
+				{ left: 320, w: 320, rot: 0, z: 30 },  // S4 right slot 0 (flush)
+			],
+		};
+
+		var HEIGHT_RATIO = 1.25;   // card art is 320×400
+		var els = {
+			open: document.querySelector('.page--open'),
+			a:    document.querySelector('.leaf--a'),
+			b:    document.querySelector('.leaf--b'),
+			c:    document.querySelector('.leaf--c'),
+			end:  document.querySelector('.page--end'),
+		};
+
+		// Apply a scene's rest state to every element (inline styles → CSS transitions
+		// animate the change). i = 0..3.
+		function applyScene(i) {
+			Object.keys(SCENES).forEach(function (key) {
+				var s  = SCENES[key][i];
+				var el = els[key];
+				el.style.left      = s.left + 'px';
+				el.style.width     = s.w + 'px';
+				el.style.height    = (s.w * HEIGHT_RATIO) + 'px';
+				el.style.transform = 'translateY(-50%) rotateY(' + s.rot + 'deg)';
+				el.style.zIndex    = s.z;
+			});
+		}
+
+		// ── State machine ────────────────────────────────────────────────────────
+		// currentScene 0..3 = spread 1..4. Right arrow advances, left reverses.
+		var LAST_SCENE = SCENES.open.length - 1;   // 3
+		var prevBtn    = document.querySelector('[data-prev]');
+		var nextBtn    = document.querySelector('[data-next]');
+
+		var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		// Lock duration = the flip's visible length, so input re-opens as it lands.
+		var FLIP_MS = reducedMotion ? 0
+			: (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--flip-duration')) || 700);
+
+		var currentScene = 0;
+		var isFlipping   = false;   // blocks input mid-turn
+
+		// Arrows: disabled at the bounds, and while a flip is in progress.
+		function updateArrows() {
+			prevBtn.disabled = isFlipping || currentScene <= 0;
+			nextBtn.disabled = isFlipping || currentScene >= LAST_SCENE;
+		}
+
+		function goToScene(i) {
+			if (isFlipping || i < 0 || i > LAST_SCENE || i === currentScene) return;
+			var from = currentScene;
+			currentScene = i;
+
+			// Exactly one leaf flips between adjacent scenes: A on 1↔2, B on 2↔3,
+			// C on 3↔4 — i.e. the leaf indexed by the lower of the two scenes.
+			var movingKey = ['a', 'b', 'c'][Math.min(from, i)];
+			var moving    = els[movingKey];
+
+			isFlipping = true;
+			applyScene(currentScene);       // targets + settled z; transitions start
+			moving.style.zIndex = 100;      // ride above everything during the sweep
+			updateArrows();                 // lock both arrows for the turn
+
+			setTimeout(function () {
+				isFlipping = false;
+				moving.style.zIndex = SCENES[movingKey][currentScene].z;   // settle z
+				updateArrows();
+			}, FLIP_MS);
+		}
+
+		nextBtn.addEventListener('click', function () { goToScene(currentScene + 1); });
+		prevBtn.addEventListener('click', function () { goToScene(currentScene - 1); });
+
+		applyScene(0);              // render Scene 1 from the table (matches the CSS layout)
+		updateArrows();            // prev starts disabled on Scene 1
+		window.applyScene = applyScene;   // exposed for verification
+		window.getScene   = function () { return currentScene; };
+	</script>
+</body>
+</html>

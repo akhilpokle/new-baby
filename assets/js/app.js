@@ -329,66 +329,97 @@ function flyDown(now, dt) {
 }
 
 // ── Sketchbook (delivery view) ────────────────────────────────────────────────
-// Two-page flip book shown over the delivery backdrop once the stork arrives.
-// One leaf turns at a time; a lock blocks input during the flip. z-index is set
-// here (not in CSS) so the turning leaf and the two page-stacks layer correctly.
-const leafEls   = Array.from(document.querySelectorAll('.leaf'));
+// Fanned-deck flip book shown over the delivery backdrop once the stork arrives.
+// card-open + card-end are standalone base pages; three leaves (A/B/C) flip one
+// at a time. Every element's per-scene layout comes from the SCENES table below;
+// CSS transitions animate the change. A lock blocks input during a flip; the
+// moving leaf rides above everything mid-turn; arrows disable at the bounds.
+const bookEl    = document.querySelector('[data-sketchbook-book]');
 const captionEl = document.querySelector('[data-sketchbook-caption]');
-const prevBtns  = document.querySelectorAll('[data-sketchbook-prev]');
+const prevBtns  = document.querySelectorAll('[data-sketchbook-prev]');   // arrow + edge-zone
 const nextBtns  = document.querySelectorAll('[data-sketchbook-next]');
 
-const LEAVES   = leafEls.length;                // 4 sheets
-const MAX_LEAF  = LEAVES - 1;                    // last spread keeps the closing note on the right
-// Lock duration = the flip's visible length, so input re-opens as the page lands.
-// Reduced motion turns pages instantly (see CSS), so drop the lock to match.
-const FLIP_MS   = reducedMotion ? 0 : (parseFloat(css.getPropertyValue('--sketchbook-flip-duration')) || 700);
-const bookEl    = document.querySelector('[data-sketchbook-book]');
+const sketchEls = {
+  open: document.querySelector('.page--open'),
+  a:    document.querySelector('.leaf--a'),
+  b:    document.querySelector('.leaf--b'),
+  c:    document.querySelector('.leaf--c'),
+  end:  document.querySelector('.page--end'),
+};
 
-// Caption per spread (index = currentLeaf; 0 = closed on the cover). aria-live.
-const CAPTIONS = ['Cover', 'Welcome & bonding', 'Insurance & claims', 'More info & farewell'];
+// Per-scene target table (single source of truth); index 0 = spread 1 … 3 = spread 4.
+// left/w are the ELEMENT box in book coords (spine at page-w = 320). Flipped leaves
+// (rot -180) pivot on their left edge, so their box `left` is the VISUAL right edge
+// (visualLeft + width) — that lands the mirrored back face flush on the left.
+// height is derived (w × 1.25). z is the resting stack order (nearer the spine on
+// top). If --sketchbook-page-w changes, regenerate these from the slot geometry.
+const SCENES = {
+  open: [ {left:   0,w:320,rot:   0,z:30}, {left:  -4,w:310,rot:   0,z:29}, {left:  -8,w:300,rot:   0,z:28}, {left: -12,w:290,rot:   0,z:27} ],
+  a:    [ {left: 320,w:320,rot:   0,z:30}, {left: 320,w:320,rot:-180,z:30}, {left: 306,w:310,rot:-180,z:29}, {left: 292,w:300,rot:-180,z:28} ],
+  b:    [ {left: 334,w:310,rot:   0,z:29}, {left: 320,w:320,rot:   0,z:30}, {left: 320,w:320,rot:-180,z:30}, {left: 306,w:310,rot:-180,z:29} ],
+  c:    [ {left: 348,w:300,rot:   0,z:28}, {left: 334,w:310,rot:   0,z:29}, {left: 320,w:320,rot:   0,z:30}, {left: 320,w:320,rot:-180,z:30} ],
+  end:  [ {left: 362,w:290,rot:   0,z:27}, {left: 348,w:300,rot:   0,z:28}, {left: 334,w:310,rot:   0,z:29}, {left: 320,w:320,rot:   0,z:30} ],
+};
+const HEIGHT_RATIO = 1.25;   // card art is 320×400
+const LAST_SCENE   = 3;
 
-let currentLeaf = 0;      // how many leaves are turned to the left
-let isFlipping  = false;  // input lock while a page is mid-turn
+// Per-spread caption for the aria-live region (index = scene).
+const CAPTIONS = [
+  'Congratulations & more time',
+  'Medical protection & claims',
+  'Nursing room & more benefits',
+  'Support & closing',
+];
 
-// Layer the leaves: flipped ones stack on the left (newest on top), unflipped on
-// the right (lowest index on top). The two ranges never overlap.
-function applyLeafZ() {
-  leafEls.forEach((leaf) => {
-    const i = Number(leaf.dataset.leaf);          // 1-based sheet number
-    leaf.style.zIndex = (i <= currentLeaf) ? (LEAVES + i) : (LEAVES - i + 1);
+// Lock duration = the flip's visible length. Reduced motion turns instantly (CSS).
+const FLIP_MS = reducedMotion ? 0 : (parseFloat(css.getPropertyValue('--sketchbook-flip-duration')) || 700);
+
+let currentScene = 0;
+let isFlipping   = false;   // input lock while a page is mid-turn
+
+// Write a scene's rest state to every element (inline styles → CSS transitions animate).
+function applyScene(i) {
+  Object.keys(SCENES).forEach((key) => {
+    const el = sketchEls[key];
+    if (!el) return;
+    const s = SCENES[key][i];
+    el.style.left      = s.left + 'px';
+    el.style.width     = s.w + 'px';
+    el.style.height    = (s.w * HEIGHT_RATIO) + 'px';
+    el.style.transform = `translateY(-50%) rotateY(${s.rot}deg)`;
+    el.style.zIndex    = s.z;
   });
 }
 
-// Update the caption + arrow disabled states for the current spread.
+// Caption + arrow disabled states for the current spread (also locked mid-flip).
 function updateSketchNav() {
-  if (captionEl) captionEl.textContent = CAPTIONS[currentLeaf] || `Spread ${currentLeaf}`;
-  prevBtns.forEach((b) => { if (b.tagName === 'BUTTON') b.disabled = currentLeaf === 0; });
-  nextBtns.forEach((b) => { if (b.tagName === 'BUTTON') b.disabled = currentLeaf === MAX_LEAF; });
+  if (captionEl) captionEl.textContent = CAPTIONS[currentScene] || '';
+  prevBtns.forEach((b) => { if (b.tagName === 'BUTTON') b.disabled = isFlipping || currentScene <= 0; });
+  nextBtns.forEach((b) => { if (b.tagName === 'BUTTON') b.disabled = isFlipping || currentScene >= LAST_SCENE; });
 }
 
-// Low-level flip of one sheet: mutates state + is-flipped, returns the moving
-// leaf (or null at a bound). Shared by the user turn and the instant open.
-function flipSheet(dir) {
-  const target = currentLeaf + dir;
-  if (target < 0 || target > MAX_LEAF) return null;   // at a bound — no move
-  // next → the leaf about to turn (currentLeaf+1); prev → the one turning back.
-  const movingIndex = dir > 0 ? currentLeaf + 1 : currentLeaf;
-  const movingLeaf  = leafEls.find((l) => Number(l.dataset.leaf) === movingIndex) || null;
-  currentLeaf = target;
-  if (movingLeaf) movingLeaf.classList.toggle('is-flipped', dir > 0);
-  return movingLeaf;
-}
-
-// Turn one page at the normal speed. dir = +1 (next) or -1 (prev).
+// Turn one page. dir = +1 (next) or -1 (prev).
 function turnPage(dir) {
-  if (isFlipping) return;                          // ignore input during a flip
-  const moving = flipSheet(dir);
-  if (!moving) return;                             // already at a bound
+  const target = currentScene + dir;
+  if (isFlipping || target < 0 || target > LAST_SCENE) return;   // locked or at a bound
+  const from = currentScene;
+  currentScene = target;
+
+  // Exactly one leaf flips between adjacent scenes: A on 1↔2, B on 2↔3, C on 3↔4 —
+  // the leaf indexed by the lower of the two scenes.
+  const movingKey = ['a', 'b', 'c'][Math.min(from, target)];
+  const moving    = sketchEls[movingKey];
+
   isFlipping = true;
-  moving.style.zIndex = 100;                       // lift above both stacks mid-turn
-  updateSketchNav();
-  // Settle z-index and release the lock once the turn finishes.
-  setTimeout(() => { applyLeafZ(); isFlipping = false; }, FLIP_MS);
+  applyScene(currentScene);                 // targets + settled z; transitions start
+  if (moving) moving.style.zIndex = 100;    // ride above everything during the sweep
+  updateSketchNav();                        // lock both arrows for the turn
+
+  setTimeout(() => {
+    isFlipping = false;
+    if (moving) moving.style.zIndex = SCENES[movingKey][currentScene].z;   // settle z
+    updateSketchNav();
+  }, FLIP_MS);
 }
 
 const nextPage = () => turnPage(1);
@@ -404,34 +435,22 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 'ArrowLeft') prevPage();
 });
 
-// Reset the book to its cover.
+// Reset the book to the first spread with NO animation (opening / closing).
 function resetSketchbook() {
-  leafEls.forEach((l) => l.classList.remove('is-flipped'));
-  currentLeaf = 0;
-  isFlipping  = false;
-  applyLeafZ();
+  currentScene = 0;
+  isFlipping   = false;
+  if (bookEl) bookEl.classList.add('is-instant');
+  applyScene(0);
+  if (bookEl) { void bookEl.offsetWidth; bookEl.classList.remove('is-instant'); }  // flush, no transition
   updateSketchNav();
 }
 
-// Open the delivery view directly on the first spread (page 1 | 2), no animation.
-// .is-instant + a forced reflow apply the opening flip with transitions off, so
-// the book simply appears open; user-driven turns animate normally afterward.
+// Delivery opens the book on the first spread (called by the rAF delivery trigger).
 function openSketchbook() {
   resetSketchbook();
-  const firstLeaf = leafEls.find((l) => Number(l.dataset.leaf) === 1);
-  if (!firstLeaf) return;
-  if (bookEl) bookEl.classList.add('is-instant');
-  firstLeaf.classList.add('is-flipped');
-  currentLeaf = 1;
-  applyLeafZ();
-  updateSketchNav();
-  if (bookEl) {
-    void bookEl.offsetWidth;                 // flush the flipped state with no transition
-    bookEl.classList.remove('is-instant');
-  }
 }
 
-// Close button: dismiss the delivery backdrop and reset the book to the cover.
+// Close button: dismiss the delivery backdrop and reset the book.
 // (Re-opening isn't wired — delivery latches once per session in this prototype.)
 const closeBtn = document.querySelector('.close-btn');
 if (closeBtn) {
@@ -441,7 +460,7 @@ if (closeBtn) {
   });
 }
 
-resetSketchbook();  // initial layering + caption
+resetSketchbook();  // initial layout + caption
 
 // ── rAF loop ──────────────────────────────────────────────────────────────────
 let lastTime = performance.now();

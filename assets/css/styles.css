@@ -359,23 +359,21 @@ html { cursor: none; }
 	pointer-events: auto;
 }
 
-/* ─── Sketchbook ─────────────────────────────────────────────────────────── */
-/* Two-page flip book shown over the delivery backdrop. It becomes visible when  */
-/* the backdrop fades in — no separate reveal transform. This block is the STATIC */
-/* layout + page styling; the animated page-turn (transition + z-index) is added  */
-/* under "Sketchbook — page flip" below and driven by app.js.                     */
+/* ─── Sketchbook — fanned-deck flip book ─────────────────────────────────── */
+/* Two-page open book shown over the delivery backdrop; visible once the backdrop */
+/* fades in. card-open + card-end are standalone base pages; three leaves flip     */
+/* (front = right page, back = left page). Each element's per-scene width/left/     */
+/* height/rotateY comes from the app.js SCENES table (inline styles); this block    */
+/* is the shared styling + transitions. Spine sits at x = --sketchbook-page-w.      */
 
 .sketchbook {
-	position: relative;          /* anchor for the absolute edge click-zones */
-	align-self: center;          /* centre vertically in the flex backdrop */
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 20px;
+	position: relative;                          /* coord context: arrows/zones anchor to book-x 0 */
+	align-self: center;                          /* centre vertically in the flex backdrop */
 	flex-shrink: 0;
+	width: calc(var(--sketchbook-page-w) * 2);   /* 640 — its left edge is book-x 0, centre = spine */
 }
 
-/* Book — two pages wide; provides the 3D perspective for the flipping leaves. */
+/* Book — provides the 3D perspective for the flipping leaves. */
 .sketchbook__book {
 	position: relative;
 	width: calc(var(--sketchbook-page-w) * 2);
@@ -383,213 +381,106 @@ html { cursor: none; }
 	perspective: var(--sketchbook-perspective);
 }
 
-/* A leaf is one sheet, positioned over the RIGHT half of the book; its spine is
-   the book centre (the leaf's own left edge). Flipping rotates it left onto the
-   other half. z-index defaults keep the cover (leaf 1) on top when the book is
-   closed; app.js re-assigns z-index during flips so pages stack correctly. */
-.leaf {
+/* White paper behind every card — spans the resting spread so a non-flush gap
+   mid-flip shows paper, not the blurred scene behind the backdrop. */
+.sketchbook__paper {
 	position: absolute;
-	top: 0;
-	left: 50%;
-	width: var(--sketchbook-page-w);
-	height: 100%;
-	transform-origin: left center;
+	top: 50%;
+	left: 0;
+	width: calc(var(--sketchbook-page-w) * 2);
+	height: var(--sketchbook-page-h);
+	transform: translateY(-50%);
+	background: var(--sketchbook-paper-bg);
+	border-radius: var(--sketchbook-radius);
+	z-index: 1;
+}
+
+/* Leaves + standalone pages share one model: explicit width + height (height =
+   width × 1.25, set inline), vertically centred; width/left/height/transform all
+   transition together for one smooth turn. Per-element values come from app.js. */
+.leaf,
+.page {
+	position: absolute;
+	top: 50%;
+	transform: translateY(-50%);
+	transition:
+		left      var(--sketchbook-flip-duration) var(--sketchbook-flip-ease),
+		width     var(--sketchbook-flip-duration) var(--sketchbook-flip-ease),
+		height    var(--sketchbook-flip-duration) var(--sketchbook-flip-ease),
+		transform var(--sketchbook-flip-duration) var(--sketchbook-flip-ease);
+}
+
+/* A leaf is one flipping sheet; spine = its own left edge (transform-origin:
+   left center). rotateY(-180deg) turns it onto the left half; backface-visibility
+   hides each face past the 90° crossover, so the back only shows once turned. */
+.leaf {
 	transform-style: preserve-3d;
-	/* Page-turn animation. Toggling .is-flipped animates rotateY 0 → -180°.
-	   z-index (which leaf sits on top mid-turn) is managed by app.js. */
-	transition: transform var(--sketchbook-flip-duration) var(--sketchbook-flip-ease);
+	transform-origin: left center;
 }
-
-/* Instant open: app.js adds .is-instant while it turns the book to the first
-   spread, so the opening flip applies with no animation. Removed the same frame. */
-.sketchbook__book.is-instant .leaf {
-	transition: none;
-}
-
-.leaf[data-leaf="1"] { z-index: 40; }
-.leaf[data-leaf="2"] { z-index: 30; }
-.leaf[data-leaf="3"] { z-index: 20; }
-.leaf[data-leaf="4"] { z-index: 10; }
-
-/* Flipped end-state. The animated transition between states is added under
-   "Sketchbook — page flip" so this static block can be verified on its own. */
-.leaf.is-flipped {
-	transform: rotateY(-180deg);
-}
-
-/* Each leaf has two faces sharing the same box; the back is pre-rotated 180° so
-   it reads correctly once the leaf turns. backface-visibility hides the reverse. */
 .leaf__face {
 	position: absolute;
 	inset: 0;
 	overflow: hidden;
 	backface-visibility: hidden;
-	background: var(--sketchbook-page-bg);
-	border: 1px solid var(--sketchbook-page-edge);
-	box-shadow: 0 6px 18px rgba(23, 39, 51, 0.12);
+}
+/* Back face pre-rotated 180° so it reads upright once the leaf turns. */
+.leaf__face--back { transform: rotateY(180deg); }
+
+/* Instant open: app.js adds .is-instant so the opening layout applies with no
+   animation (removed the same frame). */
+.sketchbook__book.is-instant .leaf,
+.sketchbook__book.is-instant .page {
+	transition: none;
 }
 
-.leaf__face--back {
-	transform: rotateY(180deg);
-}
-
-/* Soft shading toward the spine to fake page curvature. The spine is the left
-   edge of a front face and the right edge of a (rotated) back face. */
-.leaf__face::after {
-	content: '';
-	position: absolute;
-	inset: 0;
-	pointer-events: none;
-}
-.leaf__face--front::after {
-	background: linear-gradient(to right, var(--sketchbook-spine-shadow), transparent 14%);
-}
-.leaf__face--back::after {
-	background: linear-gradient(to left, var(--sketchbook-spine-shadow), transparent 14%);
-}
-
-/* ── Page content ── */
-.page {
-	position: relative;
+/* ── Page content: each face/page is a full-bleed card image ── */
+/* Card PNGs are 320×400; the box keeps that 1.25 ratio (height set inline), so
+   cover fills with no crop. Outer corners rounded per side; soft even shadow. */
+.page-img {
 	width: 100%;
 	height: 100%;
-	padding: var(--sketchbook-page-pad);
-	display: flex;
-	flex-direction: column;
-	gap: 16px;
-}
-
-.page__title {
-	font-size: var(--font-size-lg);
-	font-weight: 700;
-	color: #172733;
-	line-height: var(--line-height-snug);
-	margin: 0;
-}
-
-.page__greeting {
-	font-size: var(--font-size-md);
-	color: #172733;
-	line-height: var(--line-height-normal);
-	margin: 0;
-}
-
-.page__links {
-	display: flex;
-	flex-direction: column;
-	gap: 10px;
-}
-
-.page__link {
-	display: flex;
-	min-height: 40px;
-	padding: 8px 14px;
-	align-items: center;
-	border-radius: var(--semantic-border_radius-action);
-	border: 1px solid var(--semantic-color-border);
-	font-size: var(--font-size-sm);
-	font-weight: 500;
-	color: #172733;
-	text-decoration: none;
-	transition: background 0.15s, color 0.15s;
-}
-
-.page__link:hover {
-	background: #172733;
-	color: #ffffff;
-}
-
-.page__number {
-	position: absolute;
-	bottom: 14px;
-	right: 18px;
-	font-size: var(--font-size-xs);
-	color: var(--color-text-muted);
-}
-
-/* ── Cover / closing / back cover ── */
-.page--cover {
-	background: var(--sketchbook-cover-bg);
-	align-items: center;
-	justify-content: center;
-	text-align: center;
-	gap: 18px;
-	border: 6px solid #ffffff;
-	outline: 1px solid var(--sketchbook-cover-accent);
-	outline-offset: -10px;
-}
-
-.page__cover-image {
-	width: 150px;
-	height: 150px;
 	object-fit: cover;
-	border-radius: 50%;
-	border: 4px solid #ffffff;
+	display: block;
+	box-shadow: 0 0 4px var(--sketchbook-card-shadow);
 }
-
-.page__cover-title {
-	font-size: var(--font-size-2xl);
-	font-weight: 700;
-	color: #172733;
-	margin: 0;
-}
-
-.page__cover-name {
-	font-size: var(--font-size-md);
-	font-style: italic;
-	color: var(--color-text-muted);
-	margin: 0;
-}
-
-.page--closing {
-	align-items: center;
-	justify-content: center;
-	text-align: center;
-}
-
-.page__closing {
-	font-size: var(--font-size-xl);
-	font-style: italic;
-	color: #172733;
-	margin: 0;
-}
-
-.page--back-cover {
-	background: var(--sketchbook-cover-bg);
-}
+.page-img--right { border-radius: 0 var(--sketchbook-radius) var(--sketchbook-radius) 0; }
+.page-img--left  { border-radius: var(--sketchbook-radius) 0 0 var(--sketchbook-radius); }
 
 /* ── Navigation: edge click-zones + arrow buttons ── */
 /* Click-zones are thin strips over the OUTER edge of each page (grab-the-edge
-   metaphor) so the page links underneath stay clickable. */
+   metaphor). prev sits over the left page's outer edge, next over the right. */
 .sketchbook__zone {
 	position: absolute;
-	top: 0;
+	top: 50%;
+	transform: translateY(-50%);
 	height: var(--sketchbook-page-h);
 	width: var(--sketchbook-zone-w);
 	z-index: 60;
 	cursor: pointer;
 }
 .sketchbook__zone--prev { left: 0; }
-.sketchbook__zone--next { right: 0; }
+.sketchbook__zone--next { left: calc(var(--sketchbook-page-w) * 2 - var(--sketchbook-zone-w)); }
 
-.sketchbook__nav {
-	display: flex;
-	align-items: center;
-	gap: 20px;
-}
-
+/* Arrows flank the spread's max extent (not the book box), so they stay put as
+   the fan grows/shrinks. Positioned relative to .sketchbook (left edge = book-x 0). */
 .sketchbook__arrow {
-	position: relative;
-	width: 44px;
-	height: 44px;
+	position: absolute;
+	top: 50%;
+	transform: translateY(-50%);
+	width: var(--sketchbook-arrow-size);
+	height: var(--sketchbook-arrow-size);
 	border-radius: 50%;
-	border: 1px solid var(--semantic-color-border);
+	border: none;
 	background: #ffffff;
+	box-shadow: 0 4px 14px rgba(23, 39, 51, 0.20);
 	cursor: pointer;
-	transition: background 0.15s;
+	z-index: 70;
+	transition: background 0.15s, box-shadow 0.15s, opacity 0.15s;
 }
-.sketchbook__arrow:hover { background: #f0f0f0; }
-.sketchbook__arrow:disabled { opacity: 0.4; cursor: default; }
+.sketchbook__arrow--prev { left: calc(var(--sketchbook-content-left) - var(--sketchbook-arrow-gap) - var(--sketchbook-arrow-size)); }
+.sketchbook__arrow--next { left: calc(var(--sketchbook-content-right) + var(--sketchbook-arrow-gap)); }
+.sketchbook__arrow:hover { background: #f4f4f4; box-shadow: 0 6px 18px rgba(23, 39, 51, 0.26); }
+.sketchbook__arrow:disabled { opacity: 0.35; cursor: default; box-shadow: none; }
 
 /* Chevron drawn from a rotated corner border. */
 .sketchbook__arrow::before {
@@ -605,12 +496,17 @@ html { cursor: none; }
 .sketchbook__arrow--prev::before { transform: translate(-30%, -50%) rotate(-135deg); }
 .sketchbook__arrow--next::before { transform: translate(-70%, -50%) rotate(45deg); }
 
-.sketchbook__caption {
-	min-width: 140px;
-	text-align: center;
-	font-size: var(--font-size-sm);
-	color: #172733;
-	margin: 0;
+/* Visually-hidden live region — announces the current spread to screen readers. */
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+	border: 0;
 }
 
 /* ─── Close button ───────────────────────────────────────────────────────── */
@@ -663,8 +559,9 @@ body.is-delivered {
 	#indicator {
 		animation: none;
 	}
-	/* Sketchbook: turn pages instantly — no 3D sweep. Nav still works. */
-	.leaf {
+	/* Sketchbook: turn pages instantly — no motion. Nav still works. */
+	.leaf,
+	.page {
 		transition: none;
 	}
 }

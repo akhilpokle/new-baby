@@ -836,113 +836,72 @@
 	<div class="delivery-backdrop" data-backdrop>
 
 	<!-- CMS: welcome sketchbook -->
-	<!-- Two-page flip book — replaces the old delivery card. Opens when the stork
-	     reaches the door (JS toggles .is-visible). One leaf flips at a time: a
-	     leaf's FRONT is the right page, its BACK is the left page once it turns.
-	     Leaves are listed spine-order 1→4; JS drives the 3D rotateY page-turn. -->
+	<!-- Fanned-deck flip book — replaces the old delivery card. Opens when the stork
+	     reaches the door (JS toggles .is-visible). card-open is the left base page,
+	     card-end the right base; three leaves (front = right page / back = left page)
+	     flip one at a time — upcoming pages fan out on the right, read pages pile into
+	     left-side slivers, every turned page landing flush at the spine. Pages read in
+	     order: open → 1 → 2 → … → 6 → end. Positions come from the app.js SCENES table. -->
 	<div class="sketchbook" data-sketchbook role="group" aria-label="Welcome letter">
 
 		<div class="sketchbook__book" data-sketchbook-book>
 
-			<!-- Leaf 1 — Cover (right) / Greeting (left after flip) -->
-			<div class="leaf" data-leaf="1">
+			<!-- White paper behind every card — masks the spine gap during a flip. -->
+			<div class="sketchbook__paper" aria-hidden="true"></div>
+
+			<!-- Left base page (never flips) — card open. -->
+			<div class="page page--open" data-card="open">
+				<img class="page-img page-img--left" src="assets/img/card-open.png" alt="Congratulations on the arrival of your little bundle of joy.">
+			</div>
+
+			<!-- Leaf A — card 1 (front / right page) / card 2 (back / left page). -->
+			<div class="leaf leaf--a" data-leaf="a">
 				<div class="leaf__face leaf__face--front">
-					<!-- CMS: sketchbook cover -->
-					<div class="page page--cover">
-						<img class="page__cover-image" src="assets/img/baby_img.jpg" alt="" aria-hidden="true" />
-						<p class="page__cover-title">Welcome, Baby</p>
-						<p class="page__cover-name">for Valerie</p>
-					</div>
+					<img class="page-img page-img--right" src="assets/img/card-1.png" alt="More time with your little one: maternity, shared parental and enhanced childcare leave.">
 				</div>
 				<div class="leaf__face leaf__face--back">
-					<!-- CMS: sketchbook greeting -->
-					<div class="page">
-						<p class="page__greeting">Dear Valerie,<br>
-						Congratulation on your little bundle of joy.<br>
-						Here are some tips to ease and support your transition back to work.</p>
-						<span class="page__number">1</span>
-					</div>
+					<img class="page-img page-img--left" src="assets/img/card-2.png" alt="Medical protection for your newborn: core medical plan for eligible dependents.">
 				</div>
 			</div>
 
-			<!-- Leaf 2 — Bonding (right) / Medical insurance (left) -->
-			<div class="leaf" data-leaf="2">
+			<!-- Leaf B — card 3 (front) / card 4 (back). -->
+			<div class="leaf leaf--b" data-leaf="b">
 				<div class="leaf__face leaf__face--front">
-					<!-- CMS: sketchbook section — bonding -->
-					<div class="page">
-						<p class="page__title">Bonding with your infant</p>
-						<div class="page__links">
-							<a class="page__link" href="#" target="_blank" rel="noopener">Apply for maternity leave</a>
-							<a class="page__link" href="#" target="_blank" rel="noopener">Enhanced childcare leave</a>
-						</div>
-						<span class="page__number">2</span>
-					</div>
+					<img class="page-img page-img--right" src="assets/img/card-3.png" alt="Pregnancy and newborn related claims: S$5,000 reimbursement per newborn.">
 				</div>
 				<div class="leaf__face leaf__face--back">
-					<!-- CMS: sketchbook section — medical insurance -->
-					<div class="page">
-						<p class="page__title">Medical insurance coverage</p>
-						<div class="page__links">
-							<a class="page__link" href="#" target="_blank" rel="noopener">Newborn medical enrolment</a>
-						</div>
-						<span class="page__number">3</span>
-					</div>
+					<img class="page-img page-img--left" src="assets/img/card-4.png" alt="Returning to office: get access to the nursing room.">
 				</div>
 			</div>
 
-			<!-- Leaf 3 — Claims (right) / Other information (left) -->
-			<div class="leaf" data-leaf="3">
+			<!-- Leaf C — card 5 (front) / card 6 (back). -->
+			<div class="leaf leaf--c" data-leaf="c">
 				<div class="leaf__face leaf__face--front">
-					<!-- CMS: sketchbook section — claims -->
-					<div class="page">
-						<p class="page__title">Pregnancy / newborn-related claims</p>
-						<div class="page__links">
-							<a class="page__link" href="#" target="_blank" rel="noopener">Submit baby bonus</a>
-							<a class="page__link" href="#" target="_blank" rel="noopener">Submit iflex</a>
-						</div>
-						<span class="page__number">4</span>
-					</div>
+					<img class="page-img page-img--right" src="assets/img/card-5.png" alt="Discover other benefits: flexible work arrangements, staff deals and more.">
 				</div>
 				<div class="leaf__face leaf__face--back">
-					<!-- CMS: sketchbook section — other information -->
-					<div class="page">
-						<p class="page__title">Other useful information</p>
-						<div class="page__links">
-							<a class="page__link" href="#" target="_blank" rel="noopener">Nursing room</a>
-							<a class="page__link" href="#" target="_blank" rel="noopener">Family deals</a>
-							<a class="page__link" href="#" target="_blank" rel="noopener">Contact iOK</a>
-						</div>
-						<span class="page__number">5</span>
-					</div>
+					<img class="page-img page-img--left" src="assets/img/card-6.png" alt="Be cared for and supported.">
 				</div>
 			</div>
 
-			<!-- Leaf 4 — Closing note (right) / Back cover (left) -->
-			<div class="leaf" data-leaf="4">
-				<div class="leaf__face leaf__face--front">
-					<!-- CMS: sketchbook closing note -->
-					<div class="page page--closing">
-						<p class="page__closing">With love,<br>DBS</p>
-					</div>
-				</div>
-				<div class="leaf__face leaf__face--back">
-					<div class="page page--cover page--back-cover" aria-hidden="true"></div>
-				</div>
+			<!-- Right base page (never flips) — card end. -->
+			<div class="page page--end" data-card="end">
+				<img class="page-img page-img--right" src="assets/img/card-end.png" alt="Closing page: do you want to see more such experiences?">
 			</div>
 
 		</div>
 
-		<!-- Invisible mouse click-zones over the book (left third = prev, right = next).
-		     Keyboard / assistive-tech users use the labelled arrows below instead. -->
+		<!-- Edge click-zones over the book (mouse): the outer strip of each page turns it.
+		     Keyboard / assistive-tech users use the labelled arrows instead. -->
 		<div class="sketchbook__zone sketchbook__zone--prev" data-sketchbook-prev aria-hidden="true"></div>
 		<div class="sketchbook__zone sketchbook__zone--next" data-sketchbook-next aria-hidden="true"></div>
 
-		<!-- Page navigation — arrows flank the book; caption announces progress -->
-		<div class="sketchbook__nav">
-			<button class="sketchbook__arrow sketchbook__arrow--prev" type="button" data-sketchbook-prev aria-label="Previous page"></button>
-			<p class="sketchbook__caption" data-sketchbook-caption aria-live="polite">Cover</p>
-			<button class="sketchbook__arrow sketchbook__arrow--next" type="button" data-sketchbook-next aria-label="Next page"></button>
-		</div>
+		<!-- Navigation arrows — flank the book, vertically centred -->
+		<button class="sketchbook__arrow sketchbook__arrow--prev" type="button" data-sketchbook-prev aria-label="Previous spread"></button>
+		<button class="sketchbook__arrow sketchbook__arrow--next" type="button" data-sketchbook-next aria-label="Next spread"></button>
+
+		<!-- Current-spread announcement for screen readers (visually hidden) -->
+		<p class="sketchbook__caption sr-only" data-sketchbook-caption aria-live="polite"></p>
 
 	</div>
 
