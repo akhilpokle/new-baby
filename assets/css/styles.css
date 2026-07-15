@@ -420,8 +420,10 @@ html { cursor: none; }
 .leaf__face {
 	position: absolute;
 	inset: 0;
-	overflow: hidden;
 	backface-visibility: hidden;
+	/* No overflow:hidden — the img carries its own border-radius (clips itself);
+	   a clipping ancestor here would also cut off the img's box-shadow, since
+	   the img's box is flush with this one. */
 }
 /* Back face pre-rotated 180° so it reads upright once the leaf turns. */
 .leaf__face--back { transform: rotateY(180deg); }
@@ -441,10 +443,10 @@ html { cursor: none; }
 	height: 100%;
 	object-fit: cover;
 	display: block;
-	box-shadow: 0 0 4px var(--sketchbook-card-shadow);
 }
-.page-img--right { border-radius: 0 var(--sketchbook-radius) var(--sketchbook-radius) 0; }
-.page-img--left  { border-radius: var(--sketchbook-radius) 0 0 var(--sketchbook-radius); }
+/* Shadow x-offset points away from the spine (outward) on each side. */
+.page-img--right { border-radius: 0 var(--sketchbook-radius) var(--sketchbook-radius) 0; box-shadow:  3px 0 4px var(--sketchbook-card-shadow); }
+.page-img--left  { border-radius: var(--sketchbook-radius) 0 0 var(--sketchbook-radius); box-shadow: -3px 0 4px var(--sketchbook-card-shadow); }
 
 /* ── Navigation: edge click-zones + arrow buttons ── */
 /* Click-zones are thin strips over the OUTER edge of each page (grab-the-edge
