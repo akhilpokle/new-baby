@@ -2,3 +2,6 @@
 *.log
 Thumbs.db
 .DS_Store
+
+# Packaged prototype build — regenerated on demand, not source
+welcome-baby-prototype.zip

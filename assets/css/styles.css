@@ -410,6 +410,13 @@ html { cursor: none; }
 		transform var(--sketchbook-flip-duration) var(--sketchbook-flip-ease);
 }
 
+/* Book-open perspective pivots at each spine-adjacent edge (so the constant tilt
+   in app.js's SCENES table leans the OUTER edge toward the viewer, not the spine
+   edge). card-end and every leaf pivot at their own left edge (spine); card-open
+   is the only page permanently on the left, so it pivots at its own right edge. */
+.page--end     { transform-origin: left center; }
+.page--open    { transform-origin: right center; }
+
 /* A leaf is one flipping sheet; spine = its own left edge (transform-origin:
    left center). rotateY(-180deg) turns it onto the left half; backface-visibility
    hides each face past the 90° crossover, so the back only shows once turned. */
@@ -448,24 +455,99 @@ html { cursor: none; }
 }
 
 /* Instant open: app.js adds .is-instant so the opening layout applies with no
-   animation (removed the same frame). */
+   animation (removed the same frame). .page__content is listed separately —
+   transition:none does NOT inherit, so the box would otherwise animate its scale
+   on open/close while everything around it snaps. */
 .sketchbook__book.is-instant .leaf,
-.sketchbook__book.is-instant .page {
+.sketchbook__book.is-instant .page,
+.sketchbook__book.is-instant .page__content {
 	transition: none;
 }
 
-/* ── Page content: each face/page is a full-bleed card image ── */
-/* Card PNGs are 320×400; the box keeps that 1.25 ratio (height set inline), so
-   cover fills with no crop. Outer corners rounded per side; soft even shadow. */
-.page-img {
+/* ── Page content ──────────────────────────────────────────────────────────────
+   Each page's content lives in a box FIXED at page-w × page-h, which app.js
+   scales (transform, origin top-left) to fill its narrower fan slot. It must be
+   scaled rather than resized: resizing re-flows the text on every frame of a
+   flip, so the copy visibly re-wraps as a page turns. Scaling makes a page
+   behave like the card image it replaced. */
+.page__content {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: var(--sketchbook-page-w);
+	height: var(--sketchbook-page-h);
+	transform-origin: top left;
+	background: var(--sketchbook-paper-bg);
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+	/* THIS is the visible card — .leaf/.page are transparent boxes. Its scale must
+	   ease on the same token as their width, or the card snaps to its new size in
+	   one frame while the box it sits in eases over the full turn. */
+	transition: transform var(--sketchbook-flip-duration) var(--sketchbook-flip-ease);
+}
+/* Outer corners rounded per side; shadow x-offset points away from the spine. */
+.page__content--right { border-radius: 0 var(--sketchbook-radius) var(--sketchbook-radius) 0; box-shadow:  3px 0 4px var(--sketchbook-card-shadow); }
+.page__content--left  { border-radius: var(--sketchbook-radius) 0 0 var(--sketchbook-radius); box-shadow: -3px 0 4px var(--sketchbook-card-shadow); }
+
+/* Illustration band — cropped to the art's ~318px blush panel (all six share it),
+   so every page's text starts at the same height. The leftover white strip below
+   the panel varies per file and is cropped off; the card body is white anyway. */
+.page-illo {
+	width: 100%;
+	height: calc(var(--sketchbook-page-w) * var(--sketchbook-illo-ratio));
+	object-fit: cover;
+	object-position: top;
+	background: var(--sketchbook-illo-bg);
+	flex-shrink: 0;
+	display: block;
+}
+
+/* Closing bookend is still full-bleed card art. */
+.page-full {
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
 	display: block;
 }
-/* Shadow x-offset points away from the spine (outward) on each side. */
-.page-img--right { border-radius: 0 var(--sketchbook-radius) var(--sketchbook-radius) 0; box-shadow:  3px 0 4px var(--sketchbook-card-shadow); }
-.page-img--left  { border-radius: var(--sketchbook-radius) 0 0 var(--sketchbook-radius); box-shadow: -3px 0 4px var(--sketchbook-card-shadow); }
+
+/* Text column. Sized against the densest page — see --sketchbook-page-pad. */
+.page-body {
+	padding: var(--sketchbook-page-pad);
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: var(--sketchbook-page-gap);
+	min-height: 0;
+}
+.page-heading { font-size: var(--font-size-sm); font-weight: 600; line-height: var(--line-height-tight); color: var(--color-text); margin: 0; }
+.page-text    { font-size: 13px; line-height: var(--line-height-snug); color: var(--color-text-muted); margin: 0; }
+.page-coverage { margin: 0; padding-left: var(--space-4); font-size: 13px; line-height: var(--line-height-snug); color: var(--color-text-muted); }
+.page-note    { font-size: var(--font-size-xs); line-height: var(--line-height-snug); color: var(--color-text-muted); font-style: italic; margin: 0; }
+
+/* Two link styles — see renderLink() in app.js for which one a label gets.
+   `--unresolved` variants have no destination yet (the content names a CMS
+   template instead of a URL), so they render inert and visibly provisional. */
+.page-link {
+	font-size: 13px;
+	line-height: var(--line-height-snug);
+	color: var(--color-text);
+	text-decoration: underline;
+}
+.page-link--unresolved { color: var(--color-text-muted); text-decoration: underline dotted; cursor: default; }
+
+.page-btn {
+	font-size: 13px;
+	line-height: var(--line-height-snug);
+	padding: var(--space-2) var(--space-3);
+	border: 1px solid var(--semantic-color-border);
+	border-radius: var(--semantic-border_radius-action);
+	background: var(--color-surface);
+	color: var(--color-text);
+	text-decoration: none;
+	white-space: nowrap;
+}
+.page-btn--unresolved { color: var(--color-text-muted); border-style: dashed; cursor: default; }
 
 /* ── Navigation: edge click-zones + arrow buttons ── */
 /* Click-zones are thin strips over the OUTER edge of each page (grab-the-edge
@@ -580,9 +662,11 @@ body.is-delivered {
 	#indicator {
 		animation: none;
 	}
-	/* Sketchbook: turn pages instantly — no motion. Nav still works. */
+	/* Sketchbook: turn pages instantly — no motion. Nav still works.
+	   .page__content needs naming explicitly (transition:none doesn't inherit). */
 	.leaf,
-	.page {
+	.page,
+	.page__content {
 		transition: none;
 	}
 }

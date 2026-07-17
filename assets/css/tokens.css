@@ -91,21 +91,45 @@
 	/* ─── Sketchbook — fanned-deck flip book ──────────────────────────────────
 	   Two-page open book that replaces the delivery card, opening over the blurred
 	   --delivery backdrop when the stork reaches the door. Desktop only. Structure:
-	   card-open (left base) + 3 flipping leaves (front = right page / back = left
+	   card-open (left base) + N flipping leaves (front = right page / back = left
 	   page) + card-end (right base), fanned so upcoming pages step out on the right
 	   and read pages pile into left-side slivers; every turned page lands flush at
-	   the spine (x = page-w). Positions live in the app.js SCENES table. */
+	   the spine (x = page-w). Leaf count follows the content (4–6 pages depending
+	   on audience), so app.js DERIVES every page position from the tokens below —
+	   there is no hand-tuned position table. */
 
-	/* Page geometry. Slot-0 page = native card art size (320×400); a 1.25 height
-	   ratio (derived in JS) keeps narrower fan pages proportionally shorter. */
-	--sketchbook-page-w:        320px;
-	--sketchbook-page-h:        400px;
+	/* Page geometry — the only two values to change when resizing the book.
+	   Everything else (fan offsets, page heights, arrow anchors) is derived from
+	   these in app.js, so a resize is a two-token edit with no re-tuning. */
+	--sketchbook-page-w:        340px;
+	--sketchbook-page-h:        420px;
+
+	/* Fan shape — how far each page STEPS OUT from the one in front of it, and how
+	   much NARROWER it gets, per step of depth. Ratios of page-w (not px) so the
+	   fan keeps its proportions at any page size: at 320px these are the original
+	   hand-tuned 14px step / 10px shrink. */
+	--sketchbook-fan-x-ratio:   0.04375;   /* 14 / 320 */
+	--sketchbook-fan-w-ratio:   0.03125;   /* 10 / 320 */
 	--sketchbook-radius:        16px;    /* rounded OUTER corners of each page */
 	--sketchbook-perspective:   1200px;  /* 3D depth of the flip — smaller = deeper turn */
 
 	/* Flip timing — one smooth transition per turn (width/left/height/transform). */
 	--sketchbook-flip-duration: 700ms;
 	--sketchbook-flip-ease:     cubic-bezier(0.645, 0.045, 0.355, 1);
+
+	/* Page content — illustration band + text column.
+	   All six illustrations are 720px wide with an identical ~318px blush panel;
+	   the band crops to that panel (720:318) so every page's text starts at the
+	   same height regardless of the file's leftover white strip. */
+	--sketchbook-illo-ratio:    0.4417;   /* 318 / 720 — band height as a share of page-w */
+	--sketchbook-illo-bg:       #FEF4F3;  /* sampled from the artwork's blush panel */
+
+	/* Text column. Tuned against the DENSEST page (Pregnancy/newborn claims:
+	   heading + body + 3 bullets + note + button), which is the only one that gets
+	   near the page height — every other page has 60px+ to spare. If that section's
+	   copy grows, this is what gives. */
+	--sketchbook-page-pad:      12px 18px 12px;
+	--sketchbook-page-gap:      6px;
 
 	/* Framing — white paper backdrop masks mid-flip spine gaps; soft even shadow. */
 	--sketchbook-paper-bg:      #ffffff;
@@ -116,13 +140,21 @@
 	--sketchbook-edge-thickness: 3px;
 	--sketchbook-edge-color:     #d8d5cc;   /* muted paper-gray, reads as a shaded edge */
 
+	/* Book-open perspective — a very slight constant tilt on every page's rest
+	   angle so each outer edge leans a touch toward the viewer instead of sitting
+	   perfectly flat, like a real open book. */
+	--sketchbook-book-tilt:      5deg;
+
 	/* Navigation — flanking arrows + edge click-zones. */
 	--sketchbook-zone-w:        44px;
 	--sketchbook-arrow-size:    48px;
 	--sketchbook-arrow-gap:     24px;
 
-	/* Spread's max visual extent across scenes (spine at page-w = 320); the arrows
-	   anchor to these so they stay put as the fan grows/shrinks. */
+	/* Spread's max visual extent across scenes; the arrows anchor to these so they
+	   stay put as the fan grows/shrinks. DERIVED — app.js overwrites both at init
+	   from the page size and the leaf count (the fan is deeper with more pages, so
+	   these cannot be constants). The values here are the 3-leaf fallback, used
+	   only for the initial paint before JS runs. */
 	--sketchbook-content-left:  -12px;
 	--sketchbook-content-right: 652px;
 }

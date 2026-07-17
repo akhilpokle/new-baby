@@ -837,11 +837,15 @@
 
 	<!-- CMS: welcome sketchbook -->
 	<!-- Fanned-deck flip book — replaces the old delivery card. Opens when the stork
-	     reaches the door (JS toggles .is-visible). card-open is the left base page,
-	     card-end the right base; three leaves (front = right page / back = left page)
-	     flip one at a time — upcoming pages fan out on the right, read pages pile into
-	     left-side slivers, every turned page landing flush at the spine. Pages read in
-	     order: open → 1 → 2 → … → 6 → end. Positions come from the app.js SCENES table. -->
+	     reaches the door (JS toggles .is-visible). The letter is the left base page,
+	     the closing card the right base; the leaves between them (front = right page /
+	     back = left page) flip one at a time — upcoming pages fan out on the right,
+	     read pages pile into left-side slivers, every turned page landing flush at
+	     the spine. Pages read in order: letter → section 1 … section N → closing.
+	     Positions are derived in app.js (no position table); see docs/architecture.md.
+
+	     The pages are BUILT BY app.js from window.NEWBORN_CONTENT — the audience
+	     decides how many there are (4–6 sections), so they cannot be authored here. -->
 	<div class="sketchbook" data-sketchbook role="group" aria-label="Welcome letter">
 
 		<div class="sketchbook__book" data-sketchbook-book>
@@ -849,48 +853,7 @@
 			<!-- White paper behind every card — masks the spine gap during a flip. -->
 			<div class="sketchbook__paper" aria-hidden="true"></div>
 
-			<!-- Left base page (never flips) — card open. -->
-			<div class="page page--open" data-card="open">
-				<img class="page-img page-img--left" src="assets/img/card-open.png" alt="Congratulations on the arrival of your little bundle of joy.">
-			</div>
-
-			<!-- Leaf A — card 1 (front / right page) / card 2 (back / left page). -->
-			<div class="leaf leaf--a" data-leaf="a">
-				<div class="leaf__face leaf__face--front">
-					<img class="page-img page-img--right" src="assets/img/card-1.png" alt="More time with your little one: maternity, shared parental and enhanced childcare leave.">
-				</div>
-				<div class="leaf__face leaf__face--back">
-					<img class="page-img page-img--left" src="assets/img/card-2.png" alt="Medical protection for your newborn: core medical plan for eligible dependents.">
-				</div>
-				<div class="leaf__edge" aria-hidden="true"></div>
-			</div>
-
-			<!-- Leaf B — card 3 (front) / card 4 (back). -->
-			<div class="leaf leaf--b" data-leaf="b">
-				<div class="leaf__face leaf__face--front">
-					<img class="page-img page-img--right" src="assets/img/card-3.png" alt="Pregnancy and newborn related claims: S$5,000 reimbursement per newborn.">
-				</div>
-				<div class="leaf__face leaf__face--back">
-					<img class="page-img page-img--left" src="assets/img/card-4.png" alt="Returning to office: get access to the nursing room.">
-				</div>
-				<div class="leaf__edge" aria-hidden="true"></div>
-			</div>
-
-			<!-- Leaf C — card 5 (front) / card 6 (back). -->
-			<div class="leaf leaf--c" data-leaf="c">
-				<div class="leaf__face leaf__face--front">
-					<img class="page-img page-img--right" src="assets/img/card-5.png" alt="Discover other benefits: flexible work arrangements, staff deals and more.">
-				</div>
-				<div class="leaf__face leaf__face--back">
-					<img class="page-img page-img--left" src="assets/img/card-6.png" alt="Be cared for and supported.">
-				</div>
-				<div class="leaf__edge" aria-hidden="true"></div>
-			</div>
-
-			<!-- Right base page (never flips) — card end. -->
-			<div class="page page--end" data-card="end">
-				<img class="page-img page-img--right" src="assets/img/card-end.png" alt="Closing page: do you want to see more such experiences?">
-			</div>
+			<!-- Pages injected here by app.js buildBook(). -->
 
 		</div>
 
@@ -947,6 +910,9 @@
 		<p class="loader-text">Preparing a little something for you<span class="loader-dot">.</span><span class="loader-dot">.</span><span class="loader-dot">.</span></p>
 	</div>
 
+	<!-- Letter content — must load before app.js, which reads window.NEWBORN_CONTENT.
+	     Plain script, not fetch(): a local fetch is CORS-blocked under file://. -->
+	<script src="assets/js/content.js"></script>
 	<script src="assets/js/app.js"></script>
 </body>
 </html>

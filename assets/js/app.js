@@ -328,10 +328,61 @@ function flyDown(now, dt) {
   }
 }
 
+// ── Letter content (persona → template) ───────────────────────────────────────
+// content.js holds four COMPLETE templates, one per audience (gender ×
+// employmentType). Picking one is a lookup, not a merge — the content team has
+// already applied eligibility, so section counts differ per persona (4–6) and
+// the book sizes itself to whatever it is handed.
+//
+// Persona comes from the query string in this prototype, so every variant is
+// previewable with no backend. Values match content.js exactly:
+//   ?gender=Male&type=Direct%20Contract
+// TODO(api): GET employee profile from Workday → { name, gender, employmentType }
+
+const DEFAULT_PERSONA  = { gender: 'Female', employmentType: 'Permanent Staff' };
+const EMPLOYEE_NAME    = 'Toast';            // stand-in until Workday supplies the real name
+const NAME_PLACEHOLDER = '|Employee Name|';  // token used in the content templates
+
+function getPersona() {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    gender:         params.get('gender') || DEFAULT_PERSONA.gender,
+    employmentType: params.get('type')   || DEFAULT_PERSONA.employmentType,
+  };
+}
+
+// Find the template for a persona. Falls back to the default audience so an
+// unknown query string still shows a letter instead of an empty book.
+function resolveTemplate(persona) {
+  const templates = (window.NEWBORN_CONTENT && window.NEWBORN_CONTENT.templates) || [];
+  const match = (p) => templates.find(t =>
+    t.audience.gender === p.gender && t.audience.employmentType === p.employmentType
+  );
+  return match(persona) || match(DEFAULT_PERSONA) || null;
+}
+
+// The letter as the book renders it: a greeting/intro page, then one page per
+// section. Illustrations are looked up by heading (see content.js).
+function getLetter() {
+  const template = resolveTemplate(getPersona());
+  if (!template) return null;   // content.js missing — book stays empty
+
+  const illustrations = window.NEWBORN_ILLUSTRATIONS || {};
+  return {
+    title:    template.title,
+    greeting: template.greeting.split(NAME_PLACEHOLDER).join(EMPLOYEE_NAME),
+    intro:    template.intro,
+    sections: template.sections.map(s => ({
+      ...s,
+      illustration: illustrations[s.heading] || null,
+    })),
+  };
+}
+
 // ── Sketchbook (delivery view) ────────────────────────────────────────────────
 // Fanned-deck flip book shown over the delivery backdrop once the stork arrives.
-// card-open + card-end are standalone base pages; three leaves (A/B/C) flip one
-// at a time. Every element's per-scene layout comes from the SCENES table below;
+// card-open + card-end are standalone base pages; the leaves between them flip
+// one at a time. Every element's per-scene layout is derived by slotAt() above;
 // CSS transitions animate the change. A lock blocks input during a flip; the
 // moving leaf rides above everything mid-turn; arrows disable at the bounds.
 const bookEl    = document.querySelector('[data-sketchbook-book]');
@@ -339,37 +390,220 @@ const captionEl = document.querySelector('[data-sketchbook-caption]');
 const prevBtns  = document.querySelectorAll('[data-sketchbook-prev]');   // arrow + edge-zone
 const nextBtns  = document.querySelectorAll('[data-sketchbook-next]');
 
-const sketchEls = {
-  open: document.querySelector('.page--open'),
-  a:    document.querySelector('.leaf--a'),
-  b:    document.querySelector('.leaf--b'),
-  c:    document.querySelector('.leaf--c'),
-  end:  document.querySelector('.page--end'),
-};
+// ── Building the pages ────────────────────────────────────────────────────────
+// The book is built from the resolved letter, not authored in index.html: the
+// audience decides how many sections there are (4–6), so the leaf count varies.
+//
+//   page order:  letter | s0  s1 | s2  s3 | s4  s5 | closing
+//                 open  |  leaf 0 |  leaf 1 |  leaf 2 |  end
+//
+// Leaf j carries sections[2j] on its FRONT (a right page) and sections[2j+1] on
+// its BACK (the next spread's left page). An odd section count therefore leaves
+// the final back face blank — a blank left page facing the closing card, which is
+// what a real book does.
 
-// Per-scene target table (single source of truth); index 0 = spread 1 … 3 = spread 4.
-// left/w are the ELEMENT box in book coords (spine at page-w = 320). Flipped leaves
-// (rot -180) pivot on their left edge, so their box `left` is the VISUAL right edge
-// (visualLeft + width) — that lands the mirrored back face flush on the left.
-// height is derived (w × 1.25). z is the resting stack order (nearer the spine on
-// top). If --sketchbook-page-w changes, regenerate these from the slot geometry.
-const SCENES = {
-  open: [ {left:   0,w:320,rot:   0,z:30}, {left:  -4,w:310,rot:   0,z:29}, {left:  -8,w:300,rot:   0,z:28}, {left: -12,w:290,rot:   0,z:27} ],
-  a:    [ {left: 320,w:320,rot:   0,z:30}, {left: 320,w:320,rot:-180,z:30}, {left: 306,w:310,rot:-180,z:29}, {left: 292,w:300,rot:-180,z:28} ],
-  b:    [ {left: 334,w:310,rot:   0,z:29}, {left: 320,w:320,rot:   0,z:30}, {left: 320,w:320,rot:-180,z:30}, {left: 306,w:310,rot:-180,z:29} ],
-  c:    [ {left: 348,w:300,rot:   0,z:28}, {left: 334,w:310,rot:   0,z:29}, {left: 320,w:320,rot:   0,z:30}, {left: 320,w:320,rot:-180,z:30} ],
-  end:  [ {left: 362,w:290,rot:   0,z:27}, {left: 348,w:300,rot:   0,z:28}, {left: 334,w:310,rot:   0,z:29}, {left: 320,w:320,rot:   0,z:30} ],
-};
-const HEIGHT_RATIO = 1.25;   // card art is 320×400
-const LAST_SCENE   = 3;
+const escHtml = (s) => String(s).replace(/[&<>"]/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-// Per-spread caption for the aria-live region (index = scene).
-const CAPTIONS = [
-  'Congratulations & more time',
-  'Medical protection & claims',
-  'Nursing room & more benefits',
-  'Support & closing',
-];
+// The content mixes two kinds of link in one links[] array with no field telling
+// them apart: actions ("Submit Claim") and prose ("Update your dependant's details
+// in People Hub, including their NRIC/FIN number"). Rendering a sentence as a
+// button looks absurd, so they're split by label length.
+// PLACEHOLDER RULE — a `style`/`kind` field on each link would be the real fix.
+const LINK_BUTTON_MAX_CHARS = 30;
+
+// Some content URLs omit the protocol ("rafflesone.rafflesmedical.com/…"), which
+// the browser resolves as a RELATIVE path → 404. Normalised here so the prototype
+// links work; the source JSON should be corrected too.
+const normaliseUrl = (url) => (/^[a-z]+:\/\//i.test(url) ? url : 'https://' + url);
+
+// One link. Only some entries carry a real URL; the rest name a CMS template that
+// resolves at Liferay time, so they render inert rather than as a dead link.
+// TODO(api): give the linkText / label-only entries real destinations.
+function renderLink(link) {
+  const cls = link.label.length <= LINK_BUTTON_MAX_CHARS ? 'page-btn' : 'page-link';
+  if (link.url) {
+    return `<a class="${cls}" href="${escHtml(normaliseUrl(link.url))}" target="_blank" rel="noopener">${escHtml(link.label)}</a>`;
+  }
+  return `<span class="${cls} ${cls}--unresolved" data-cms-ref="${escHtml(link.linkText || '')}">${escHtml(link.label)}</span>`;
+}
+
+// A benefit page: illustration band + heading + body + optional bullets/note + links.
+function renderSection(section) {
+  const art = section.illustration
+    ? `<img class="page-illo" src="${escHtml(section.illustration)}" alt="">`
+    : '';
+  const coverage = section.coverage
+    ? `<ul class="page-coverage">${section.coverage.map((c) => `<li>${escHtml(c)}</li>`).join('')}</ul>`
+    : '';
+  const note  = section.note ? `<p class="page-note">${escHtml(section.note)}</p>` : '';
+  const links = (section.links || []).map(renderLink).join('');
+  return `${art}<div class="page-body">
+      <h3 class="page-heading">${escHtml(section.heading)}</h3>
+      <p class="page-text">${escHtml(section.body)}</p>
+      ${coverage}${note}${links}
+    </div>`;
+}
+
+// The letter page: branded hero (Congratulations lockup is baked into the art,
+// hence the descriptive alt) + greeting + intro.
+function renderLetter(letter) {
+  return `<img class="page-illo" src="assets/img/baby_img.jpg" alt="Congratulations on the arrival of your little bundle of joy.">
+    <div class="page-body">
+      <p class="page-text">${escHtml(letter.greeting)}</p>
+      <p class="page-text">${escHtml(letter.intro)}</p>
+    </div>`;
+}
+
+// Closing bookend — not part of the content templates, so the original card art
+// stands in. TODO(api): real closing copy + wire the thumbs-up/down feedback.
+function renderEnd() {
+  return `<img class="page-full" src="assets/img/card-end.png" alt="Closing page: do you want to see more such experiences?">`;
+}
+
+// Every page's content sits in a FIXED page-w × page-h box that applyScene scales
+// to its slot. Scaling (not resizing) is what stops the text re-wrapping mid-flip.
+const pageContent = (side, inner) =>
+  `<div class="page__content page__content--${side}" data-page-content>${inner}</div>`;
+
+function buildBook(letter) {
+  const sections  = letter.sections;
+  const leafCount = Math.ceil(sections.length / 2);
+  const frag      = document.createDocumentFragment();
+
+  const open = document.createElement('div');
+  open.className   = 'page page--open';
+  open.dataset.card = 'open';
+  open.innerHTML   = pageContent('left', renderLetter(letter));
+  frag.appendChild(open);
+
+  const leaves = [];
+  for (let j = 0; j < leafCount; j++) {
+    const back = sections[2 * j + 1];   // undefined on an odd count → blank page
+    const leaf = document.createElement('div');
+    leaf.className    = 'leaf';
+    leaf.dataset.leaf = j;
+    leaf.innerHTML =
+      `<div class="leaf__face leaf__face--front">${pageContent('right', renderSection(sections[2 * j]))}</div>` +
+      `<div class="leaf__face leaf__face--back">${pageContent('left', back ? renderSection(back) : '')}</div>` +
+      `<div class="leaf__edge" aria-hidden="true"></div>`;
+    frag.appendChild(leaf);
+    leaves.push(leaf);
+  }
+
+  const end = document.createElement('div');
+  end.className    = 'page page--end';
+  end.dataset.card = 'end';
+  end.innerHTML    = pageContent('right', renderEnd());
+  frag.appendChild(end);
+
+  bookEl.appendChild(frag);
+  return { open, end, leaves };
+}
+
+// Per-spread caption for the aria-live region, from the headings on show.
+function buildCaptions(letter, leafCount) {
+  const s = letter.sections;
+  const caps = [];
+  for (let i = 0; i <= leafCount; i++) {
+    const left  = i === 0 ? 'Congratulations' : (s[2 * i - 1] ? s[2 * i - 1].heading : null);
+    const right = i === leafCount ? 'Closing'  : s[2 * i].heading;
+    caps.push([left, right].filter(Boolean).join(' & '));
+  }
+  return caps;
+}
+
+// Leaves are addressed by INDEX (0…n-1) — the fan geometry is defined in terms of
+// how many pages sit in front of a leaf, which is exactly its index.
+const letter = getLetter();
+const built  = (letter && bookEl) ? buildBook(letter) : { open: null, end: null, leaves: [] };
+
+const openEl  = built.open;
+const endEl   = built.end;
+const leafEls = built.leaves;
+
+const LEAF_COUNT = leafEls.length;
+const LAST_SCENE = LEAF_COUNT;          // scenes 0…n — one more spread than leaves
+const CAPTIONS   = letter ? buildCaptions(letter, LEAF_COUNT) : [];
+
+// Every element the fan positions, back-to-front order irrelevant (z does that).
+const sceneKeys = () => ['open', ...leafEls.map((_, i) => i), 'end'];
+const elementFor = (key) =>
+  key === 'open' ? openEl : key === 'end' ? endEl : leafEls[key];
+
+// Book-open perspective: a small constant tilt added to every rest angle below,
+// so the outer edge of each page leans toward the viewer instead of sitting
+// perfectly flat (see --sketchbook-book-tilt). Derived from the rotateY(θ) world-Z
+// formula (z' = -x·sinθ for a point at local x, pivoting at the spine): a
+// right-side page (pivot at its own left/spine edge, outer edge at local +x) needs
+// rot = -TILT to bring its outer edge toward the camera; a left-side page (pivot
+// at its own right/spine edge, outer edge at local -x relative to that pivot)
+// needs rot = +TILT. Flipped leaves land at -(180-TILT) — slightly short of a
+// full half-turn — which resolves to the same +TILT lean once mirrored onto the
+// left side (verified against the actual rotateY matrices during testing).
+const BOOK_TILT = parseFloat(css.getPropertyValue('--sketchbook-book-tilt')) || 0;
+const ROT_RIGHT   = -BOOK_TILT;          // right-side page (leaf front, card-end)
+const ROT_LEFT    =  BOOK_TILT;          // left-side page, never flipped (card-open)
+const ROT_FLIPPED = -(180 - BOOK_TILT);  // leaf back, now the left page
+
+// ── Fan geometry ──────────────────────────────────────────────────────────────
+// Page positions are DERIVED, not tabulated, so the book works with any number of
+// leaves (audiences have 4–6 pages) and any page size (resize = two tokens).
+//
+// Every position falls out of one number: DEPTH — how many pages sit in front of
+// this one on its own side of the spine. Depth 0 = flush at the spine (the page
+// you are reading); each step further back steps FAN_X out from the spine, gets
+// FAN_W narrower, and drops one z-level:
+//
+//   right side (leaf front, card-end):   left = PAGE_W + FAN_X·d
+//   left side, flipped (leaf back):      left = PAGE_W − FAN_X·d
+//   left side, never flipped (card-open) left = −(FAN_X − FAN_W)·d
+//   all:                                 w = PAGE_W − FAN_W·d ,  z = Z_TOP − d
+//
+// card-open's formula looks odd only because `left` means different things per
+// element: flipped leaves pivot on their left edge, so their box `left` is the
+// VISUAL RIGHT edge, while card-open's is its true left. Both recede from the
+// spine by the same FAN_X·d — the −4·d is (FAN_X − FAN_W)·d, i.e. what's left
+// once the narrower width has already taken up part of the step.
+const PAGE_W       = parseFloat(css.getPropertyValue('--sketchbook-page-w')) || 320;
+const PAGE_H       = parseFloat(css.getPropertyValue('--sketchbook-page-h')) || 400;
+const FAN_X        = PAGE_W * (parseFloat(css.getPropertyValue('--sketchbook-fan-x-ratio')) || 0.04375);
+const FAN_W        = PAGE_W * (parseFloat(css.getPropertyValue('--sketchbook-fan-w-ratio')) || 0.03125);
+const HEIGHT_RATIO = PAGE_H / PAGE_W;   // derived — one source of truth with the tokens
+const Z_TOP        = 30;                // resting z of the spine-flush page (see docs/architecture.md)
+
+// Depth of each element at a given scene. `leafCount` leaves → scenes 0…leafCount.
+// At scene i, leaves 0…i-1 are turned (left side) and i…n-1 are upcoming (right).
+// The most recently turned leaf (i-1) is flush at the spine, hence i-1-j.
+function depthAt(key, i, leafCount) {
+  if (key === 'open') return i;                    // behind every turned page
+  if (key === 'end')  return leafCount - i;        // behind every upcoming page
+  const j = key;                                   // leaf index
+  return j < i ? i - 1 - j : j - i;
+}
+
+// Rest state of one element at one scene. `d` (depth) is returned too: depth 0 is
+// the spread on show, which is what decides reachability (see applyScene).
+function slotAt(key, i, leafCount) {
+  const d = depthAt(key, i, leafCount);
+  const w = PAGE_W - FAN_W * d;
+  const z = Z_TOP - d;
+  if (key === 'open')             return { left: -(FAN_X - FAN_W) * d, w, rot: ROT_LEFT,    z, d };
+  if (key === 'end')              return { left: PAGE_W + FAN_X * d,   w, rot: ROT_RIGHT,   z, d };
+  const flipped = key < i;        // leaf already turned onto the left page
+  return flipped
+    ? { left: PAGE_W - FAN_X * d, w, rot: ROT_FLIPPED, z, d }
+    : { left: PAGE_W + FAN_X * d, w, rot: ROT_RIGHT,   z, d };
+}
+
+// The spread's widest visual extent across every scene — the arrows anchor to it.
+// Deeper fans (more leaves) reach further, so this cannot be a constant.
+function fanExtent(leafCount) {
+  return {
+    left:  -(FAN_X - FAN_W) * leafCount,                          // card-open at max depth
+    right: PAGE_W + FAN_X * leafCount + (PAGE_W - FAN_W * leafCount), // card-end at max depth
+  };
+}
 
 // Lock duration = the flip's visible length. Reduced motion turns instantly (CSS).
 const FLIP_MS = reducedMotion ? 0 : (parseFloat(css.getPropertyValue('--sketchbook-flip-duration')) || 700);
@@ -379,15 +613,36 @@ let isFlipping   = false;   // input lock while a page is mid-turn
 
 // Write a scene's rest state to every element (inline styles → CSS transitions animate).
 function applyScene(i) {
-  Object.keys(SCENES).forEach((key) => {
-    const el = sketchEls[key];
+  sceneKeys().forEach((key) => {
+    const el = elementFor(key);
     if (!el) return;
-    const s = SCENES[key][i];
+    const s = slotAt(key, i, LEAF_COUNT);
     el.style.left      = s.left + 'px';
     el.style.width     = s.w + 'px';
     el.style.height    = (s.w * HEIGHT_RATIO) + 'px';
     el.style.transform = `translateY(-50%) rotateY(${s.rot}deg)`;
     el.style.zIndex    = s.z;
+
+    // Fit each page's fixed-size content box to its (narrower) fan slot by SCALING
+    // it. Resizing the box instead would re-flow the text every frame of a flip.
+    const scale = s.w / PAGE_W;
+    el.querySelectorAll('[data-page-content]').forEach((c) => {
+      c.style.transform = `scale(${scale})`;
+    });
+
+    // Reachability: only the two pages ON the current spread (depth 0) may take
+    // focus or be read aloud. Everything else is fanned out behind them or turned
+    // face-down — without this, Tab walks into buried pages (e.g. "Submit Claim"
+    // was reachable from spread 1). `inert` removes them from the tab order AND
+    // the accessibility tree in one go.
+    const onSpread = s.d === 0;
+    el.inert = !onSpread;
+    if (key !== 'open' && key !== 'end') {
+      // An active leaf still shows only ONE of its two faces.
+      const flipped = key < i;
+      el.querySelector('.leaf__face--front').inert = !onSpread || flipped;
+      el.querySelector('.leaf__face--back').inert  = !onSpread || !flipped;
+    }
   });
 }
 
@@ -405,10 +660,10 @@ function turnPage(dir) {
   const from = currentScene;
   currentScene = target;
 
-  // Exactly one leaf flips between adjacent scenes: A on 1↔2, B on 2↔3, C on 3↔4 —
-  // the leaf indexed by the lower of the two scenes.
-  const movingKey = ['a', 'b', 'c'][Math.min(from, target)];
-  const moving    = sketchEls[movingKey];
+  // Exactly one leaf flips between adjacent scenes: leaf 0 on 1↔2, leaf 1 on 2↔3 …
+  // — the leaf indexed by the lower of the two scenes.
+  const movingKey = Math.min(from, target);
+  const moving    = leafEls[movingKey];
 
   isFlipping = true;
   applyScene(currentScene);                 // targets + settled z; transitions start
@@ -417,7 +672,7 @@ function turnPage(dir) {
 
   setTimeout(() => {
     isFlipping = false;
-    if (moving) moving.style.zIndex = SCENES[movingKey][currentScene].z;   // settle z
+    if (moving) moving.style.zIndex = slotAt(movingKey, currentScene, LEAF_COUNT).z;   // settle z
     updateSketchNav();
   }, FLIP_MS);
 }
@@ -435,11 +690,21 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 'ArrowLeft') prevPage();
 });
 
+// Publish the fan's widest extent to CSS — the arrows anchor to these, and a
+// deeper fan (more leaves) reaches further, so they can't be static tokens.
+function publishFanExtent() {
+  const { left, right } = fanExtent(LEAF_COUNT);
+  const root = document.documentElement;
+  root.style.setProperty('--sketchbook-content-left',  left  + 'px');
+  root.style.setProperty('--sketchbook-content-right', right + 'px');
+}
+
 // Reset the book to the first spread with NO animation (opening / closing).
 function resetSketchbook() {
   currentScene = 0;
   isFlipping   = false;
   if (bookEl) bookEl.classList.add('is-instant');
+  publishFanExtent();
   applyScene(0);
   if (bookEl) { void bookEl.offsetWidth; bookEl.classList.remove('is-instant'); }  // flush, no transition
   updateSketchNav();

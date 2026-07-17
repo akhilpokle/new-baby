@@ -181,3 +181,77 @@ covers it during load. On "Let's go" the overlay's **gradient** fades slowly
 (`--intro-flydown-duration`, doubling as the sky cross-fade) while its **content**
 (stork/text/buttons) fades fast (0.3 s) via `.is-leaving` — otherwise the splash
 stork lingers as a ghost over the descent. Keep those two durations distinct.
+
+---
+
+## 17. The book does NOT scale with the stage
+
+Everything inside `<main data-stage>` lives in the 1366 × 768 coordinate space and
+is scaled to cover the viewport. **`.delivery-backdrop` is outside `</main>`**, so
+its `position: fixed` is genuinely viewport-relative and the book renders at raw
+CSS pixels on every screen.
+
+Consequence: the book does not shrink on a small screen. Page sizes must be chosen
+against the **1024 px minimum**, not against your monitor. At `--sketchbook-page-w:
+360px` the book plus arrows spans ~891 px of the 992 px available at 1024 px.
+
+If you move the backdrop inside `.stage`, `position: fixed` will resolve against
+the transformed ancestor instead of the viewport and the whole thing will move.
+
+---
+
+## 18. Page content must be SCALED, not resized
+
+The fan makes background pages narrower. `applyScene` sets `width`/`height` on the
+leaf, but each page's content sits in a **fixed `page-w × page-h` box**
+(`[data-page-content]`) that is fitted with `transform: scale()`.
+
+This matters because the pages now hold real text. Sizing the content box directly
+would re-flow the copy on **every frame of a flip** — the text visibly re-wraps as
+a page turns. Scaling makes a page behave like the card image it replaced.
+
+Do not "simplify" this by giving `.page__content` a percentage width.
+
+---
+
+## 19. The claims page has ~zero height headroom, and clips SILENTLY
+
+`Pregnancy/new-born related claims` (heading + body + 3 bullets + note + button) is
+the densest page and needs **439 px of the 440 px** page height. Every other page
+has 34–154 px spare.
+
+`.page__content` is `overflow: hidden`, so when this breaks it will not error or
+visibly burst — the button just disappears off the bottom. Nobody notices in review.
+
+Anything that touches type, `--sketchbook-page-pad`, `--sketchbook-page-gap`, or
+that section's copy can break it. Re-measure after such a change; the reliable fix
+is `--sketchbook-page-h: 460px` (still fits a 640 px-tall window at 460 + 120 px of
+backdrop padding).
+
+---
+
+## 20. content.js must mirror newborn_mtm_templates.json by hand
+
+`assets/newborn_mtm_templates.json` is the source of truth, but nothing loads it:
+`fetch()` of a local file is CORS-blocked under `file://` (same root cause as #1),
+and the prototype must run by double-clicking `index.html`. `assets/js/content.js`
+is a verbatim JS copy.
+
+**They can drift.** Edit the JSON first, then mirror it. At Liferay handoff both are
+replaced by CMS-rendered content, so the duplication is temporary — but until then
+a change to only one of them is a silent bug.
+
+---
+
+## 21. Only the current spread may be focusable
+
+Every page is in the DOM at once, fanned out behind the current spread. Without
+guarding, `Tab` walks into buried pages — "Submit Claim" on the claims page was
+reachable from spread 1 while off-screen.
+
+`applyScene` sets `inert` on every element whose `slotAt().d !== 0`, and on the
+non-showing face of the two active leaves. `inert` removes them from the tab order
+**and** the accessibility tree.
+
+If you add interactive content to a page, it inherits this automatically — but only
+if it lives inside the leaf/page element. Anything portalled elsewhere will leak.
