@@ -435,6 +435,14 @@ html { cursor: none; }
 /* Back face pre-rotated 180° so it reads upright once the leaf turns. */
 .leaf__face--back { transform: rotateY(180deg); }
 
+/* Front face: rotateY(0deg) looks like a no-op, and visually it is — but it is NOT
+   a no-op for hit-testing. Inside a preserve-3d context the browser only descends
+   into children that have their own transform, so a transform-less face swallows
+   :hover and clicks for everything inside it (the back face gets this for free via
+   its rotateY(180deg), which is why only back-face pages were ever clickable).
+   Do not remove — see docs/gotchas.md. */
+.leaf__face--front { transform: rotateY(0deg); }
+
 /* Page edge — thin strip at the leaf's outer border (opposite the spine), folded
    90° into the leaf's own 3D space. Rigidly attached, so it rotates WITH the leaf:
    a hairline at rest (0°/180°), widening into a visible shaded strip as the page
@@ -537,17 +545,23 @@ html { cursor: none; }
 .page-link--unresolved { color: var(--color-text-muted); text-decoration: underline dotted; cursor: default; }
 
 .page-btn {
-	font-size: 13px;
-	line-height: var(--line-height-snug);
-	padding: var(--space-2) var(--space-3);
+	height: var(--space-6);
+	flex-shrink: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-size: var(--font-size-sm);
+	line-height: var(--line-height-tight);
+	padding: 0 var(--space-3);
 	border: 1px solid var(--semantic-color-border);
 	border-radius: var(--semantic-border_radius-action);
-	background: var(--color-surface);
-	color: var(--color-text);
+	background: transparent;
+	color: var(--semantic-color-text);
 	text-decoration: none;
 	white-space: nowrap;
 }
-.page-btn--unresolved { color: var(--color-text-muted); border-style: dashed; cursor: default; }
+.page-btn:hover { background: var(--semantic-color-fill-hover); }
+.page-btn--unresolved { cursor: default; }
 
 /* ── Navigation: edge click-zones + arrow buttons ── */
 /* Click-zones are thin strips over the OUTER edge of each page (grab-the-edge
@@ -669,4 +683,52 @@ body.is-delivered {
 	.page__content {
 		transition: none;
 	}
+}
+
+/* ─── PROTOTYPE-ONLY: persona switcher ────────────────────────────────────────
+   Dev/demo control (injected by app.js) to preview the book per audience. Lives
+   inside the delivery backdrop, so it inherits the backdrop's fade and only shows
+   while the book is open. DELETE this block (and the app.js PROTOTYPE-ONLY block)
+   at Liferay handoff. */
+.persona-switcher {
+	position: fixed;
+	top: var(--space-5);
+	left: var(--space-5);
+	z-index: 10001;
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+	padding: var(--space-3);
+	background: var(--color-surface);
+	border: 1px solid var(--semantic-color-border);
+	border-radius: var(--radius-md);
+	box-shadow: 0 4px 14px rgba(23, 39, 51, 0.20);
+	cursor: default;   /* override the global html { cursor: none } */
+}
+.persona-switcher__label {
+	margin: 0 0 var(--space-1);
+	font-size: var(--font-size-xs);
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--color-text-muted);
+}
+.persona-switcher__btn {
+	font-family: inherit;
+	font-size: var(--font-size-sm);
+	text-align: left;
+	white-space: nowrap;
+	padding: var(--space-2) var(--space-3);
+	border: 1px solid var(--semantic-color-border);
+	border-radius: var(--semantic-border_radius-action);
+	background: transparent;
+	color: var(--semantic-color-text);
+	cursor: pointer;
+}
+.persona-switcher__btn:hover { background: var(--semantic-color-fill-hover); }
+.persona-switcher__btn--active {
+	background: var(--semantic-color-text);
+	border-color: var(--semantic-color-text);
+	color: var(--color-surface);
+	cursor: default;
 }

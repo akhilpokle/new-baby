@@ -255,3 +255,27 @@ non-showing face of the two active leaves. `inert` removes them from the tab ord
 
 If you add interactive content to a page, it inherits this automatically — but only
 if it lives inside the leaf/page element. Anything portalled elsewhere will leak.
+
+---
+
+## 22. A transform-less child of `preserve-3d` swallows hover and clicks
+
+`.leaf__face--front` carries `transform: rotateY(0deg)`. It looks like dead code.
+**It is not** — deleting it makes every button on every front-facing page stop
+responding to `:hover` and clicks.
+
+Inside a `transform-style: preserve-3d` context, the browser only descends
+hit-testing into children that have their own transform. A face with
+`transform: none` becomes the hit target for its entire subtree, so the buttons
+inside it never receive the pointer.
+
+`.leaf__face--back` gets this for free from its `rotateY(180deg)` — which is why
+the bug presented as *"only the one button on a back face works"* and looked like a
+z-index or overlap problem. It is neither.
+
+Note that `inert` (gotcha #21) does **not** cause or fix this: `inert` blocks focus
+and clicks but does not affect `:hover` matching. The two mechanisms are unrelated.
+
+Diagnosis trick: `document.elementFromPoint()` over the button returns the
+**face**, not the button, while `elementsFromPoint()` still lists the button on top.
+That disagreement is the signature of this bug.

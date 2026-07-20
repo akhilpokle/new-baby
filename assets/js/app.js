@@ -727,6 +727,65 @@ if (closeBtn) {
 
 resetSketchbook();  // initial layout + caption
 
+// ── PROTOTYPE-ONLY: persona switcher + direct-to-book preview ──────────────────
+// A dev/demo affordance to preview how the book builds for each audience without a
+// backend. The switcher is injected into the delivery backdrop (so it shows only
+// while the book is open); picking a persona reloads with ?gender&type&book=1, and
+// ?book=1 skips the splash + stork flight so you land straight back in the book.
+//
+// DELETE THIS ENTIRE BLOCK (and the matching one in styles.css) at Liferay handoff:
+// there, persona comes from Workday and neither the switcher nor the ?book backdoor
+// belongs in production.
+const PREVIEW_BOOK = new URLSearchParams(window.location.search).get('book') === '1';
+
+function initPersonaSwitcher() {
+  const templates = (window.NEWBORN_CONTENT && window.NEWBORN_CONTENT.templates) || [];
+  if (!templates.length || !backdropEl) return;
+  const current = getPersona();
+
+  const panel = document.createElement('div');
+  panel.className = 'persona-switcher';
+  panel.innerHTML = '<p class="persona-switcher__label">Preview persona</p>';
+
+  templates.forEach((t) => {
+    const gender = t.audience.gender;
+    const type   = t.audience.employmentType;
+    const isCurrent = gender === current.gender && type === current.employmentType;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'persona-switcher__btn' + (isCurrent ? ' persona-switcher__btn--active' : '');
+    btn.textContent = `${gender} · ${type} — ${t.sections.length} sections`;
+
+    if (isCurrent) {
+      btn.setAttribute('aria-current', 'true');
+      btn.disabled = true;
+    } else {
+      btn.addEventListener('click', () => {
+        const params = new URLSearchParams({ gender, type, book: '1' });
+        window.location.search = params.toString();   // reload into the chosen persona's book
+      });
+    }
+    panel.appendChild(btn);
+  });
+
+  backdropEl.appendChild(panel);
+}
+
+// ?book=1 → open the book on spread 1 immediately, bypassing the stork experience.
+function openBookDirect() {
+  introState = 'active';
+  if (introEl) introEl.remove();          // synchronous: the loader's `if (introEl)` guard then skips the splash
+  deliveryTriggered = true;               // freeze the stork game — we're going straight to delivery
+  document.body.classList.add('is-delivered');
+  if (backdropEl) backdropEl.classList.add('is-visible');
+  openSketchbook();
+}
+
+initPersonaSwitcher();
+if (PREVIEW_BOOK) openBookDirect();
+// ── END PROTOTYPE-ONLY ─────────────────────────────────────────────────────────
+
 // ── rAF loop ──────────────────────────────────────────────────────────────────
 let lastTime = performance.now();
 

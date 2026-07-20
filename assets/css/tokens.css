@@ -18,6 +18,8 @@
 	/* Semantic tokens — swap for DLS values at Liferay handoff */
 	--semantic-border_radius-action: 4px;
 	--semantic-color-border:         #B0B9C0;
+	--semantic-color-text:           #172733;
+	--semantic-color-fill-hover:     #EEF2F5;
 
 	/* Spacing scale (base 4px) */
 	--space-1:            4px;
