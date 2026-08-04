@@ -395,6 +395,21 @@ html { cursor: none; }
 	z-index: 1;
 }
 
+/* Gutter — hairline centred ON the spine seam (hence translateX(-50%)), splitting
+   the two facing pages. z-index sits ABOVE the resting spread (pages rest at
+   z ≤ 30, see Z_TOP in app.js) so the line reads between them, but BELOW a leaf
+   mid-turn (z 100) so the page sweeps over the line instead of being sliced by it. */
+.sketchbook__gutter {
+	position: absolute;
+	top: 50%;
+	left: var(--sketchbook-page-w);
+	width: var(--sketchbook-gutter-w);
+	height: var(--sketchbook-page-h);
+	transform: translate(-50%, -50%);
+	background: var(--sketchbook-gutter-color);
+	z-index: 50;
+}
+
 /* Leaves + standalone pages share one model: explicit width + height (height =
    width × 1.25, set inline), vertically centred; width/left/height/transform all
    transition together for one smooth turn. Per-element values come from app.js. */
@@ -511,38 +526,61 @@ html { cursor: none; }
 	display: block;
 }
 
-/* Closing bookend is still full-bleed card art. */
-.page-full {
-	width: 100%;
-	height: 100%;
-	object-fit: cover;
-	display: block;
-}
-
 /* Text column. Sized against the densest page — see --sketchbook-page-pad. */
 .page-body {
 	padding: var(--sketchbook-page-pad);
 	display: flex;
 	flex-direction: column;
 	align-items: flex-start;
-	gap: var(--sketchbook-page-gap);
 	min-height: 0;
 }
-.page-heading { font-size: var(--font-size-sm); font-weight: 600; line-height: var(--line-height-tight); color: var(--color-text); margin: 0; }
-.page-text    { font-size: 13px; line-height: var(--line-height-snug); color: var(--color-text-muted); margin: 0; }
-.page-coverage { margin: 0; padding-left: var(--space-4); font-size: 13px; line-height: var(--line-height-snug); color: var(--color-text-muted); }
-.page-note    { font-size: var(--font-size-xs); line-height: var(--line-height-snug); color: var(--color-text-muted); font-style: italic; margin: 0; }
+
+/* TWO TEXT FORMATS ONLY — heading and paragraph. Everything on every page is one
+   or the other: page headings and TLDR item labels are `.page-heading`; body copy,
+   claim-coverage lines, notes and sign-offs are all `.page-text`. No italics, no
+   list markers, no third size. Adding a variant here re-opens what this replaced.
+   (No `margin: 0` needed — the global reset already does it, and declaring it here
+   would out-cascade the spacing rules below at equal specificity.) */
+.page-heading { font-size: var(--font-size-sm); font-weight: 600; line-height: var(--line-height-tight); color: var(--color-text); }
+.page-text    { font-size: var(--font-size-sm); line-height: var(--line-height-relaxed); color: var(--color-text-secondary); }
+
+/* Spacing is margin-based, NOT flex `gap` — the gap between two children depends
+   on WHICH pair they are, and a single `gap` can't vary per pair (it would also
+   ADD to any margin rather than be replaced by it). Must stay AFTER the two rules
+   above: `.page-body > * + *` is one class, so an equal-specificity `margin` on
+   `.page-text` declared later would silently win and flatten the default to 0. */
+.page-body > * + *         { margin-top: var(--sketchbook-page-gap); }
+/* A heading binds tightly to the paragraph it introduces. */
+.page-heading + .page-text { margin-top: var(--sketchbook-gap-heading-text); }
+/* An action sits further off whatever content precedes it. */
+.page-body > * + .page-btn { margin-top: var(--sketchbook-gap-content-action); }
+
+/* The letter is a personal message, not reference material, so it reads at full
+   contrast — every other page keeps the muted grey. */
+.page-body--letter .page-text { color: var(--color-text); }
+
+/* The closing page carries only a sign-off, so it would otherwise sit in the top
+   third with ~260px of blank paper under it. Centring it in the leftover space
+   reads as a deliberate bookend rather than a page that failed to fill. */
+.page-body--closing {
+	flex: 1;
+	justify-content: center;
+}
 
 /* Two link styles — see renderLink() in app.js for which one a label gets.
    `--unresolved` variants have no destination yet (the content names a CMS
-   template instead of a URL), so they render inert and visibly provisional. */
+   template instead of a URL), so they render inert.
+   NOTE: they used to carry a dotted underline marking them as provisional. That
+   cue was dropped with the move to two text formats, so an unresolved link is now
+   indistinguishable from body copy on screen — the list of which links still need
+   destinations lives in HANDOFF.md, not in the UI. */
 .page-link {
 	font-size: 13px;
 	line-height: var(--line-height-snug);
 	color: var(--color-text);
 	text-decoration: underline;
 }
-.page-link--unresolved { color: var(--color-text-muted); text-decoration: underline dotted; cursor: default; }
+.page-link--unresolved { color: var(--color-text-muted); text-decoration: none; cursor: default; }
 
 .page-btn {
 	height: var(--space-6);

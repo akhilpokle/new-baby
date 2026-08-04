@@ -214,19 +214,65 @@ Do not "simplify" this by giving `.page__content` a percentage width.
 
 ---
 
-## 19. The claims page has ~zero height headroom, and clips SILENTLY
+## 19. Page height is content-driven, and overruns clip SILENTLY
 
-`Pregnancy/new-born related claims` (heading + body + 3 bullets + note + button) is
-the densest page and needs **439 px of the 440 px** page height. Every other page
-has 34–154 px spare.
+`.page__content` is `overflow: hidden`. When a page needs more height than
+`--sketchbook-page-h`, nothing errors and nothing visibly bursts — the overflowing
+element just disappears off the bottom. **This has already shipped broken once:** at
+`420px` the claims page needed `426px`, so its "Submit Claim" button was cut off and
+went unnoticed through review.
 
-`.page__content` is `overflow: hidden`, so when this breaks it will not error or
-visibly burst — the button just disappears off the bottom. Nobody notices in review.
+`--sketchbook-page-h` is therefore sized against the **measured tallest page**, not
+guessed. Current state at `485px`, **only 8px of slack** — deliberately tight:
 
-Anything that touches type, `--sketchbook-page-pad`, `--sketchbook-page-gap`, or
-that section's copy can break it. Re-measure after such a change; the reliable fix
-is `--sketchbook-page-h: 460px` (still fits a 640 px-tall window at 460 + 120 px of
-backdrop padding).
+| Page | Needs | Slack |
+|---|---|---|
+| `Pregnancy/new-born related claims` (all 4 personas — identical copy) | 477 px | 8 px |
+| everything else | ≤ 440 px | 45 px+ |
+
+**A per-persona height would gain nothing.** The claims page appears in all four
+personas with identical copy and is the tallest in each, so every persona computes
+the same 477px.
+
+Where the 477px goes, and why it is hard to shrink further:
+
+| Part | Height | Reducible? |
+|---|---|---|
+| Illustration band | 150 px (31%) | **No** — pixel-sampled all six JPGs; artwork runs to the bottom of the blush panel in every file, so a tighter crop cuts art, not whitespace |
+| Text content | 259 px | Only by editing DBS copy |
+| Padding (16 × 2) | 32 px | Set deliberately |
+| Inter-element margins | 36 px | Set deliberately |
+
+Widening the page does **not** help: the band is `width × --sketchbook-illo-ratio`,
+so it grows ~9px per 20px of width, cancelling the lines saved by wrapping less.
+Measured: 340→477px, 380→495px, 400→482px, 440→500px. **340px is near-optimal.**
+
+This number has moved five times: 420 (shipped clipping) → 585 (a `.page-text` type
+change pushed the summary page to 562px) → 490 (summary items collapsed to one line
+each, handing "tallest" back to the claims page) → 498 (`--sketchbook-page-pad`
+12/18 → 16) → 485 (slack trimmed 21px → 8px). All but the last were side effects of
+some *other* edit rather than a resize request.
+
+Two rules follow. **Whichever page is tallest changes** — don't assume it's the
+claims page, even though it currently is again. And **`--sketchbook-page-pad` moves
+this token**: each 1px of vertical padding costs 2px of page height.
+
+Anything touching type, `--sketchbook-page-pad`, `--sketchbook-page-gap`, or any
+page's copy can break this. Re-measure by cloning each page unconstrained — the
+live boxes are flex children and report the *constrained* height, which looks fine
+even when clipping:
+
+```js
+const c = document.querySelector('[data-page-content]').cloneNode(true);
+c.style.cssText += ';transform:none;position:static;height:auto;overflow:visible';
+document.body.appendChild(c); c.offsetHeight;   // ← the height actually needed
+```
+
+At `485px` the book fits a 640 px-tall window with no scrolling (485 + 120 px of
+backdrop padding = 605 px, confirmed). Note this margin is not fixed: at `585px`
+(the previous value) the book *exceeded* 640px and needed `.delivery-backdrop`'s
+`overflow-y: auto` to avoid clipping — that fallback exists and works, but don't
+rely on it; re-check the 640px floor whenever `--sketchbook-page-h` moves.
 
 ---
 

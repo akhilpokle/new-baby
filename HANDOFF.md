@@ -16,7 +16,7 @@ there are** — so the book's structure is generated at runtime, not authored.
 ## 1. What the book is
 
 ```
-letter | s0    s1 | s2    s3 | s4    s5 | closing
+letter | tldr  s0 | s1    s2 | s3    s4 | closing
  open  |  leaf 0  |  leaf 1  |  leaf 2  |  end
 ```
 
@@ -25,15 +25,20 @@ A fanned deck: a **letter page** (left base) and a **closing page** (right base)
 left-side slivers, every turned page landing flush at the spine. One leaf turns at a
 time. Opens on spread 1.
 
+Right after the letter comes a **TLDR page** — a contents-page summary, one line per
+section that follows, in the same order it appears in the book. It is just another
+page as far as the fan geometry is concerned (see `letterPages()` in `app.js`): the
+leaf count below is `sections + 1` (the TLDR), not `sections`.
+
 The letter content comes from `assets/newborn_mtm_templates.json` — **four complete
 templates**, one per audience:
 
-| Audience | Sections | Leaves | Spreads |
-|---|---|---|---|
-| Male / Permanent Staff | 5 | 3 | 4 |
-| Male / Direct Contract | 4 | 2 | 3 |
-| Female / Permanent Staff | 6 | 3 | 4 |
-| Female / Direct Contract | 5 | 3 | 4 |
+| Audience | Sections | Pages (incl. TLDR) | Leaves | Spreads |
+|---|---|---|---|---|
+| Male / Permanent Staff | 5 | 6 | 3 | 4 |
+| Male / Direct Contract | 4 | 5 | 3 | 4 |
+| Female / Permanent Staff | 6 | 7 | 4 | 5 |
+| Female / Direct Contract | 5 | 6 | 3 | 4 |
 
 Only two eligibility rules drive the difference: **Medical Protection is
 Permanent-only**, **nursing rooms are Female-only**. Everything else is universal
@@ -81,14 +86,58 @@ mirror it.** Both are replaced by CMS-rendered content at Liferay handoff.
 
 | Renderer | Used for | Content |
 |---|---|---|
-| `renderLetter()` | letter page | `baby_img.jpg` hero + greeting + intro |
-| `renderSection()` | each section | illustration + heading + body + optional `coverage[]` bullets + optional `note` + `links[]` |
-| `renderEnd()` | closing page | still the original `card-end.png` art |
+| `renderLetter()` | letter page | `baby_img.jpg` hero + greeting + intro, at full text contrast (`.page-body--letter`) |
+| `renderTldr()` | TLDR page | heading + lead, then each item as a heading + paragraph, then the `footer` line. No illustration |
+| `renderSection()` | each section | illustration + heading + body + `coverage[]` as paragraphs + optional `note` + `links[]` |
+| `renderEnd()` | closing page | centred sign-off from `window.NEWBORN_CLOSING` — **placeholder copy** |
 
-`buildBook()` maps **leaf `j` → `sections[2j]` on the front (right page),
-`sections[2j+1]` on the back (left page)**. An odd section count leaves the final
-back face **blank** — a blank left page facing the closing card, which is what a real
-book does.
+### Page spacing is margin-based, not `gap`
+The gap between two children of `.page-body` depends on which pair they are:
+
+| Pair | Gap | Token |
+|---|---|---|
+| heading → paragraph | 4px | `--sketchbook-gap-heading-text` |
+| anything → button | 8px | `--sketchbook-gap-content-action` |
+| everything else | 6px | `--sketchbook-page-gap` (default) |
+
+Flex `gap` can't vary per pair (and *adds* to margins rather than being replaced by
+them), so `.page-body` sets no `gap` and spacing comes from `* + *` margins.
+⚠️ **Those rules must stay after `.page-heading`/`.page-text` in `styles.css`** —
+`.page-body > * + *` is a single class, so a later equal-specificity `margin` on
+`.page-text` silently flattens the default to 0. That exact bug happened once.
+
+### Two text formats only
+Every page uses exactly two: **`.page-heading`** (14px semibold, full contrast — page
+headings *and* TLDR item labels) and **`.page-text`** (13px, muted — body copy,
+claim-coverage lines, notes, sign-offs). No italics, no list markers, no third size;
+`coverage[]` renders as paragraphs rather than a `<ul>`. Buttons and real links are
+controls, not a text format, and keep their own styling.
+
+⚠️ **Unresolved links no longer look unresolved.** They used to carry a dotted
+underline marking "no destination yet"; that was a third format and went with this
+change. The 7 links still needing URLs are listed below — that table is now the only
+record, since the UI no longer shows it.
+
+`letterPages(letter)` builds one flat array — the TLDR (if the template has one)
+followed by the sections — so `buildBook()` never has to know a TLDR exists; it just
+maps **leaf `j` → `pages[2j]` on the front (right page), `pages[2j+1]` on the back
+(left page)**. An odd page count leaves the final back face **blank** — a blank left
+page facing the closing card, which is what a real book does. This is why Male/Perm
+and Female/Direct (odd section counts) lost their blank page and Female/Perm and
+Male/Direct (even section counts) gained one, once the TLDR page shifted parity.
+
+**TLDR content is hand-authored, one item per section, same order as the book** — it
+doubles as a table of contents, and its `footer` line points the reader at the pages
+that follow. No links (the sections are one page-turn away) and no illustration: the
+6-item persona needs that height budget for the list, not art. It has ~38px of
+headroom on the worst case (Female/Perm) — comfortable, but nowhere near the claims
+page's near-zero margin (see gotchas #19). If a template's item copy grows
+materially, re-measure.
+
+**Closing copy lives in `window.NEWBORN_CLOSING`** (top-level `closing` in the JSON),
+*not* inside `templates[]` — it is the same for every audience. It replaced the
+full-bleed `card-end.png`; that file is **still referenced by `variations/`**, so it
+has not been deleted. The `.page-full` CSS rule went with it (nothing else used it).
 
 Illustrations are keyed **by section heading** in `content.js` (the art is
 persona-stable, so this avoids duplicating six paths across four templates).
@@ -159,10 +208,11 @@ two active leaves. Without it, `Tab` walks into buried off-screen pages (gotchas
 | `assets/css/tokens.css` | Sketchbook token block |
 | `assets/img/baby_img.jpg` | **Letter page hero** — in use, do not remove |
 | `assets/img/more-time.jpg` … `care-and-support.jpg` | 6 section illustrations, 720px wide |
-| `assets/img/card-*.png` | Original card art — **still used by `variations/`**; `card-end.png` is the live closing page |
+| `assets/img/card-*.png` | Original card art — **only used by `variations/`** now; the live closing page is HTML, not `card-end.png` |
 
 ### Key tokens (`tokens.css`)
-`--sketchbook-page-w` (360) / `-page-h` (440) — the two you'd change to resize.
+`--sketchbook-page-w` (340) / `-page-h` (485) — the two you'd change to resize.
+`-page-h` is **measured against the tallest page**, not chosen (see the warning above).
 `--sketchbook-fan-x-ratio` (0.04375) / `-fan-w-ratio` (0.03125) — fan shape.
 `--sketchbook-illo-ratio` (0.4417 = 318/720) / `-illo-bg` (#FEF4F3) — illustration band.
 `--sketchbook-page-pad` / `-page-gap` — text column (see the headroom warning below).
@@ -181,15 +231,28 @@ kebab-case on purpose — GitHub Pages is case-sensitive and spaces need encodin
 
 ## 5. Open items
 
-### ⚠️ The claims page has ~zero headroom and clips silently
-`Pregnancy/new-born related claims` needs **439px of the 440px** page height — every
-other page has 34–154px spare. `.page__content` is `overflow: hidden`, so when it
-breaks the button just **disappears off the bottom with no error**. Nobody notices in
-review.
+### ⚠️ Page height is measured, not guessed — overruns clip silently
+`--sketchbook-page-h` is `485px`, sized against the **tallest measured page**: the
+claims page (477px), leaving only **8px of slack**. Everything else has 45px+ spare.
 
-Any change to type, `--sketchbook-page-pad`, `--sketchbook-page-gap`, or that
-section's copy can break it. **Recommended fix: `--sketchbook-page-h: 460px`** — one
-token, restores ~20px, still fits a 640px-tall window. (Gotchas #19.)
+The claims page is the tallest in **all four personas** (identical copy), so a
+per-persona height would compute the same 477px four times — there is nothing to
+gain there. 477px is also close to the floor: 150px of it is the illustration band,
+and pixel-sampling all six JPGs shows artwork running to the bottom of the blush
+panel in every one, so cropping tighter cuts art rather than whitespace. Widening
+the page doesn't help either (the band scales with width). Full analysis in
+gotchas #19.
+
+`.page__content` is `overflow: hidden`, so an overrun **disappears off the bottom
+with no error**. This number has moved four times, each as a side effect of another
+edit rather than a resize request — 420 (shipped broken) → 585 (a `.page-text` type
+change) → 490 (summary items collapsing to one line) → 498 (`--sketchbook-page-pad`
+12/18 → 16) → 485 (slack trimmed to 8px). Re-measure after **any** type, copy or
+padding change (method in gotchas #19); never assume the claims page is still the
+tallest. With only 8px of slack there is now very little room for error.
+
+At 485px the book fits the 640px-tall floor with no scrolling (485 + 120px backdrop
+padding = 605px).
 
 ### Links need destinations — 7 of 9 have none
 | Link | State |
@@ -199,9 +262,9 @@ token, restores ~20px, still fits a 640px-tall window. (Gotchas #19.)
 | `Update your dependant's details…`, `More info on medical benefits here`, `Access iOK here` | ❌ name a CMS template (`linkText`), no URL |
 | `Parental Benefits`, `Flexible Work Arrangements`, `Family Deals`, `Nursing Rooms: …` | ❌ label only, no destination |
 
-Unresolved links render inert and visibly provisional (dashed border / dotted
-underline). They need real URLs, or confirmation that Liferay resolves the
-`linkText` template references.
+Unresolved links render inert but **look identical to resolved ones** now that the
+dotted-underline cue is gone (see "Two text formats only" above). They need real
+URLs, or confirmation that Liferay resolves the `linkText` template references.
 
 ### Button vs text link is a placeholder rule
 `links[]` mixes actions (`Submit Claim`) with prose (`Update your dependant's details
@@ -211,9 +274,13 @@ Current rule: label ≤ 30 chars → button, longer → inline text link
 fix.**
 
 ### Content questions for the content team
-- **Closing page copy** — not in the JSON, so `card-end.png` stands in. Its body text
-  duplicates "Discover other benefits" verbatim and looks like placeholder. The 👍/👎
-  feedback is baked into the PNG and doesn't click.
+- **Closing page copy is PROTOTYPE-WRITTEN, not theirs.** The page is now real HTML
+  (`window.NEWBORN_CLOSING`), replacing `card-end.png` — whose copy duplicated
+  "Discover other benefits" verbatim and whose 👍/👎 control was part of the image and
+  never clicked. Needs their words, and a decision on whether the feedback control
+  comes back as a working element (`TODO(api)` in `content.js`).
+- **TLDR page copy is also prototype-written** — one summary line per section, plus
+  the "flip through the pages" footer. Needs their review for tone and accuracy.
 - **`Staff Deals`** (Male/Perm) vs **`Family Deals`** (other three) — same link,
   different label. Intentional?
 - **Male/Perm intro omits "As you return to work,"** which the other three have.
@@ -268,9 +335,11 @@ the card scales smoothly rather than snapping; open/close snaps with no animatio
 
 ## 7. Git state
 
-- Last commit: **`0e087f6`** — *"Add page-edge thickness to the flip animation"*.
-- **Everything in this document is uncommitted** — the content pipeline, derived
-  geometry, real HTML pages, the 360×440 resize, accessibility scoping, and the docs
-  updates. Modified: `index.html`, `app.js`, `styles.css`, `tokens.css`,
-  `docs/architecture.md`, `docs/gotchas.md`. Untracked: `content.js`,
-  `newborn_mtm_templates.json`, the 6 illustration JPGs.
+- Last commit: **`753851d`** — *"Restyle page buttons, fix dead hover, add persona
+  switcher"*. The content pipeline, derived geometry and real HTML pages are all
+  committed as of `99b6e5c`/`753851d`.
+- **Uncommitted:** the TLDR summary page, the HTML closing page (replacing
+  `card-end.png`), the two-text-format typography pass, the spine gutter, and the
+  485px page height.
+  Modified: `app.js`, `content.js`, `newborn_mtm_templates.json`, `styles.css`,
+  `tokens.css`, `HANDOFF.md`, `docs/architecture.md`, `docs/gotchas.md`.

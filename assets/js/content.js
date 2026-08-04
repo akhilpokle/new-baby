@@ -27,6 +27,18 @@ window.NEWBORN_CONTENT = {
 			audience: { gender: 'Male', employmentType: 'Permanent Staff' },
 			greeting: 'Dear |Employee Name|,',
 			intro: "Our heartiest congratulations on the arrival of your little bundle of joy! This is truly a special time, and we hope you've been able to enjoy these precious moments with your new family. Here's some ways we wish to support you and your family on this journey.",
+			tldr: {
+				heading: 'At a glance',
+				lead: "Here's an overview of all the benefits waiting for you.",
+				items: [
+					{ label: 'Time off', text: 'Paternity, shared parental and enhanced childcare leave.' },
+					{ label: 'Medical cover', text: 'Core medical plan for your newborn as a permanent employee.' },
+					{ label: 'Maternity claims', text: 'S$5,000 per newborn towards pre-natal, delivery and early care.' },
+					{ label: 'Other benefits', text: 'Flexible work, staff deals and the wider parental line-up.' },
+					{ label: 'Wellbeing support', text: 'iOK, whenever you want to talk something through.' },
+				],
+				footer: 'Flip through the pages to see each one in detail.',
+			},
 			sections: [
 				{
 					heading: 'More time with the little one',
@@ -94,6 +106,17 @@ window.NEWBORN_CONTENT = {
 			audience: { gender: 'Male', employmentType: 'Direct Contract' },
 			greeting: 'Dear |Employee Name|,',
 			intro: "Our heartiest congratulations on the arrival of your little bundle of joy! This is truly a special time, and we hope you've been able to enjoy these precious moments with your new family. As you return to work, here's some ways we wish to support you and your family on this journey.",
+			tldr: {
+				heading: 'At a glance',
+				lead: "Here's an overview of all the benefits waiting for you.",
+				items: [
+					{ label: 'Time off', text: 'Paternity and shared parental leave, after 90 days of service.' },
+					{ label: 'Maternity claims', text: 'S$5,000 per newborn towards pre-natal, delivery and early care.' },
+					{ label: 'Other benefits', text: 'Flexible work, family deals and the wider parental line-up.' },
+					{ label: 'Wellbeing support', text: 'iOK, whenever you want to talk something through.' },
+				],
+				footer: 'Flip through the pages to see each one in detail.',
+			},
 			sections: [
 				{
 					heading: 'More time with the little one',
@@ -148,6 +171,19 @@ window.NEWBORN_CONTENT = {
 			audience: { gender: 'Female', employmentType: 'Permanent Staff' },
 			greeting: 'Dear |Employee Name|,',
 			intro: "Our heartiest congratulations on the arrival of your little bundle of joy! This is truly a special time, and we hope you've been able to enjoy several precious moments with your new family. As you return to work, here's some ways we wish to support you and your family on this journey.",
+			tldr: {
+				heading: 'At a glance',
+				lead: "Here's an overview of all the benefits waiting for you.",
+				items: [
+					{ label: 'Time off', text: 'Maternity, shared parental and enhanced childcare leave.' },
+					{ label: 'Medical cover', text: 'Core medical plan for your newborn, with the option to upgrade.' },
+					{ label: 'Maternity claims', text: 'S$5,000 per newborn towards pre-natal, delivery and early care.' },
+					{ label: 'Nursing rooms', text: "Private spaces for when you're back in the office." },
+					{ label: 'Other benefits', text: 'Flexible work, family deals and the wider parental line-up.' },
+					{ label: 'Wellbeing support', text: 'iOK, whenever you want to talk something through.' },
+				],
+				footer: 'Flip through the pages to see each one in detail.',
+			},
 			sections: [
 				{
 					heading: 'More time with the little one',
@@ -222,6 +258,18 @@ window.NEWBORN_CONTENT = {
 			audience: { gender: 'Female', employmentType: 'Direct Contract' },
 			greeting: 'Dear |Employee Name|,',
 			intro: "Our heartiest congratulations on the arrival of your little bundle of joy! This is truly a special time, and we hope you've been able to enjoy several precious moments with your new family. As you return to work, here's some ways we wish to support you and your family on this journey.",
+			tldr: {
+				heading: 'At a glance',
+				lead: "Here's an overview of all the benefits waiting for you.",
+				items: [
+					{ label: 'Time off', text: 'Maternity and shared parental leave, after 90 days of service.' },
+					{ label: 'Maternity claims', text: 'S$5,000 per newborn towards pre-natal, delivery and early care.' },
+					{ label: 'Nursing rooms', text: "Private spaces for when you're back in the office." },
+					{ label: 'Other benefits', text: 'Flexible work, family deals and the wider parental line-up.' },
+					{ label: 'Wellbeing support', text: 'iOK, whenever you want to talk something through.' },
+				],
+				footer: 'Flip through the pages to see each one in detail.',
+			},
 			sections: [
 				{
 					heading: 'More time with the little one',
@@ -278,6 +326,21 @@ window.NEWBORN_CONTENT = {
 				},
 			],
 		},
+	],
+};
+
+// Closing bookend copy. NOT persona-specific — one block for every audience, so it
+// sits outside templates[] (mirrors the top-level "closing" key in the JSON).
+//
+// ⚠️ PROTOTYPE PLACEHOLDER — the content team has not written this page. It replaced
+// card-end.png, whose copy duplicated "Discover other benefits" verbatim and whose
+// 👍/👎 feedback control was baked into the image and never clicked.
+// TODO(api): real closing copy + a working feedback control, if the page keeps one.
+window.NEWBORN_CLOSING = {
+	heading: "That's everything for now",
+	body: [
+		'We hope this makes the months ahead a little lighter. Everything in here stays in the benefits portal, so you can come back to it whenever you need to.',
+		'Congratulations again — from all of us at DBS.',
 	],
 };
 

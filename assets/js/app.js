@@ -372,6 +372,7 @@ function getLetter() {
     title:    template.title,
     greeting: template.greeting.split(NAME_PLACEHOLDER).join(EMPLOYEE_NAME),
     intro:    template.intro,
+    tldr:     template.tldr || null,
     sections: template.sections.map(s => ({
       ...s,
       illustration: illustrations[s.heading] || null,
@@ -393,14 +394,26 @@ const nextBtns  = document.querySelectorAll('[data-sketchbook-next]');
 // ── Building the pages ────────────────────────────────────────────────────────
 // The book is built from the resolved letter, not authored in index.html: the
 // audience decides how many sections there are (4–6), so the leaf count varies.
+// The TLDR (when the template has one) is prepended to the sections as page 0 —
+// it is just another page as far as the fan geometry is concerned.
 //
-//   page order:  letter | s0  s1 | s2  s3 | s4  s5 | closing
+//   page order:  letter | tldr s0 | s1  s2 | s3  s4 | closing
 //                 open  |  leaf 0 |  leaf 1 |  leaf 2 |  end
 //
-// Leaf j carries sections[2j] on its FRONT (a right page) and sections[2j+1] on
-// its BACK (the next spread's left page). An odd section count therefore leaves
-// the final back face blank — a blank left page facing the closing card, which is
+// Leaf j carries pages[2j] on its FRONT (a right page) and pages[2j+1] on its
+// BACK (the next spread's left page). An odd page count therefore leaves the
+// final back face blank — a blank left page facing the closing card, which is
 // what a real book does.
+//
+// Each entry is pre-rendered to an HTML string plus the heading used for the
+// aria-live caption — buildBook/buildCaptions only ever see "how many pages and
+// what's their markup/heading", not what kind of page they are.
+function letterPages(letter) {
+  const tldr = letter.tldr
+    ? [{ heading: letter.tldr.heading, html: renderTldr(letter.tldr) }]
+    : [];
+  return tldr.concat(letter.sections.map((s) => ({ heading: s.heading, html: renderSection(s) })));
+}
 
 const escHtml = (s) => String(s).replace(/[&<>"]/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -433,10 +446,12 @@ function renderSection(section) {
   const art = section.illustration
     ? `<img class="page-illo" src="${escHtml(section.illustration)}" alt="">`
     : '';
+  // Coverage lines are plain paragraphs, not a bulleted list — the pages use only
+  // two text formats (heading + paragraph); a list would be a third.
   const coverage = section.coverage
-    ? `<ul class="page-coverage">${section.coverage.map((c) => `<li>${escHtml(c)}</li>`).join('')}</ul>`
+    ? section.coverage.map((c) => `<p class="page-text">${escHtml(c)}</p>`).join('')
     : '';
-  const note  = section.note ? `<p class="page-note">${escHtml(section.note)}</p>` : '';
+  const note  = section.note ? `<p class="page-text">${escHtml(section.note)}</p>` : '';
   const links = (section.links || []).map(renderLink).join('');
   return `${art}<div class="page-body">
       <h3 class="page-heading">${escHtml(section.heading)}</h3>
@@ -445,20 +460,55 @@ function renderSection(section) {
     </div>`;
 }
 
+// TLDR page: a contents-page summary, one line per section that follows, in the
+// same order — so it doubles as a map of the book. Text-only (no illustration):
+// the illustrated pages spend ~150px of the 420px page height on art, and the
+// 6-item persona needs that height for the list. A tinted band (matching
+// --sketchbook-illo-bg) stands in for the missing illustration so the page still
+// reads as part of the same set.
+function renderTldr(tldr) {
+  // Each item is one paragraph — "Label: text" — not a heading + paragraph pair.
+  // Still only the two page formats (this page's own h3 is the only heading on it).
+  const items = tldr.items.map((item) =>
+    `<p class="page-text">${escHtml(item.label)}: ${escHtml(item.text)}</p>`
+  ).join('');
+  const footer = tldr.footer
+    ? `<p class="page-text">${escHtml(tldr.footer)}</p>`
+    : '';
+  return `<div class="page-body">
+      <h3 class="page-heading">${escHtml(tldr.heading)}</h3>
+      <p class="page-text">${escHtml(tldr.lead)}</p>
+      ${items}
+      ${footer}
+    </div>`;
+}
+
 // The letter page: branded hero (Congratulations lockup is baked into the art,
 // hence the descriptive alt) + greeting + intro.
+// `--letter` darkens the copy (see styles.css): the letter is the one page that is
+// a personal message rather than reference material, so it reads at full contrast
+// instead of the muted grey the section pages use.
 function renderLetter(letter) {
   return `<img class="page-illo" src="assets/img/baby_img.jpg" alt="Congratulations on the arrival of your little bundle of joy.">
-    <div class="page-body">
+    <div class="page-body page-body--letter">
       <p class="page-text">${escHtml(letter.greeting)}</p>
       <p class="page-text">${escHtml(letter.intro)}</p>
     </div>`;
 }
 
-// Closing bookend — not part of the content templates, so the original card art
-// stands in. TODO(api): real closing copy + wire the thumbs-up/down feedback.
+// Closing bookend. Built the same way as the TLDR page (tinted band + text) rather
+// than the full-bleed card-end.png it replaced — that art's copy duplicated
+// "Discover other benefits" and its 👍/👎 control was part of the image, so it
+// could never respond to a click.
+// Copy is a PROTOTYPE PLACEHOLDER from content.js — see the TODO(api) there.
 function renderEnd() {
-  return `<img class="page-full" src="assets/img/card-end.png" alt="Closing page: do you want to see more such experiences?">`;
+  const closing = window.NEWBORN_CLOSING;
+  if (!closing) return '';   // content.js missing — leave the page blank rather than error
+  const paras = closing.body.map((p) => `<p class="page-text">${escHtml(p)}</p>`).join('');
+  return `<div class="page-body page-body--closing">
+      <h3 class="page-heading">${escHtml(closing.heading)}</h3>
+      ${paras}
+    </div>`;
 }
 
 // Every page's content sits in a FIXED page-w × page-h box that applyScene scales
@@ -467,8 +517,8 @@ const pageContent = (side, inner) =>
   `<div class="page__content page__content--${side}" data-page-content>${inner}</div>`;
 
 function buildBook(letter) {
-  const sections  = letter.sections;
-  const leafCount = Math.ceil(sections.length / 2);
+  const pages     = letterPages(letter);
+  const leafCount = Math.ceil(pages.length / 2);
   const frag      = document.createDocumentFragment();
 
   const open = document.createElement('div');
@@ -479,13 +529,13 @@ function buildBook(letter) {
 
   const leaves = [];
   for (let j = 0; j < leafCount; j++) {
-    const back = sections[2 * j + 1];   // undefined on an odd count → blank page
+    const back = pages[2 * j + 1];   // undefined on an odd count → blank page
     const leaf = document.createElement('div');
     leaf.className    = 'leaf';
     leaf.dataset.leaf = j;
     leaf.innerHTML =
-      `<div class="leaf__face leaf__face--front">${pageContent('right', renderSection(sections[2 * j]))}</div>` +
-      `<div class="leaf__face leaf__face--back">${pageContent('left', back ? renderSection(back) : '')}</div>` +
+      `<div class="leaf__face leaf__face--front">${pageContent('right', pages[2 * j].html)}</div>` +
+      `<div class="leaf__face leaf__face--back">${pageContent('left', back ? back.html : '')}</div>` +
       `<div class="leaf__edge" aria-hidden="true"></div>`;
     frag.appendChild(leaf);
     leaves.push(leaf);
@@ -498,16 +548,15 @@ function buildBook(letter) {
   frag.appendChild(end);
 
   bookEl.appendChild(frag);
-  return { open, end, leaves };
+  return { open, end, leaves, pages };
 }
 
 // Per-spread caption for the aria-live region, from the headings on show.
-function buildCaptions(letter, leafCount) {
-  const s = letter.sections;
+function buildCaptions(pages, leafCount) {
   const caps = [];
   for (let i = 0; i <= leafCount; i++) {
-    const left  = i === 0 ? 'Congratulations' : (s[2 * i - 1] ? s[2 * i - 1].heading : null);
-    const right = i === leafCount ? 'Closing'  : s[2 * i].heading;
+    const left  = i === 0 ? 'Congratulations' : (pages[2 * i - 1] ? pages[2 * i - 1].heading : null);
+    const right = i === leafCount ? 'Closing'  : pages[2 * i].heading;
     caps.push([left, right].filter(Boolean).join(' & '));
   }
   return caps;
@@ -516,7 +565,7 @@ function buildCaptions(letter, leafCount) {
 // Leaves are addressed by INDEX (0…n-1) — the fan geometry is defined in terms of
 // how many pages sit in front of a leaf, which is exactly its index.
 const letter = getLetter();
-const built  = (letter && bookEl) ? buildBook(letter) : { open: null, end: null, leaves: [] };
+const built  = (letter && bookEl) ? buildBook(letter) : { open: null, end: null, leaves: [], pages: [] };
 
 const openEl  = built.open;
 const endEl   = built.end;
@@ -524,7 +573,7 @@ const leafEls = built.leaves;
 
 const LEAF_COUNT = leafEls.length;
 const LAST_SCENE = LEAF_COUNT;          // scenes 0…n — one more spread than leaves
-const CAPTIONS   = letter ? buildCaptions(letter, LEAF_COUNT) : [];
+const CAPTIONS   = letter ? buildCaptions(built.pages, LEAF_COUNT) : [];
 
 // Every element the fan positions, back-to-front order irrelevant (z does that).
 const sceneKeys = () => ['open', ...leafEls.map((_, i) => i), 'end'];

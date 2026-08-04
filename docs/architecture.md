@@ -73,6 +73,19 @@ are only a first-paint fallback.
 **Cloud z-ordering is DOM-order dependent.** `.clouds-layer` must appear **after**
 `.sky` and **before** `.scene-layer` in the HTML. Changing DOM order breaks the layering.
 
+### Inside the book (its own stack, under `.sketchbook__book`)
+
+| Layer | Element | z-index | Notes |
+|---|---|---|---|
+| Paper | `.sketchbook__paper` | 1 | White backdrop; masks the spine gap mid-flip |
+| Pages | `.page`, `.leaf` | `Z_TOP − d` (≤ 30) | Set inline by `applyScene`; deeper fan = lower z |
+| Gutter | `.sketchbook__gutter` | 50 | Hairline on the spine — above the resting spread… |
+| Turning leaf | `.leaf` mid-flip | 100 | …but below this, so the page sweeps **over** the gutter |
+
+The gutter's 50 is deliberately between the two: at ≤ 30 the pages would cover the
+line, and above 100 the line would slice through a page mid-turn. If `Z_TOP` or the
+mid-flip 100 in `turnPage()` change, this value has to stay between them.
+
 ---
 
 ## Scene zoom transform-origin
@@ -93,7 +106,7 @@ are only a first-paint fallback.
 ## Sketchbook — derived fan geometry
 
 The flip book has **no position table**. The leaf count follows the content (each
-audience gets 4–6 sections → 2–3 leaves), so every page position is derived in
+audience gets 4–6 sections + 1 TLDR page → 3–4 leaves), so every page position is derived in
 `app.js` from one number: **depth** — how many pages sit in front of this one on
 its own side of the spine.
 
@@ -155,7 +168,8 @@ dbs-new-baby/
 │       ├── cursor-arrow.png              — right-pointing PNG arrow, 32 × 32 display
 │       ├── baby_img.jpg                  — letter page hero (Congratulations lockup)
 │       ├── more-time.jpg … care-and-support.jpg  — 6 section illustrations, 720px wide
-│       └── card-*.png                    — ORIGINAL card art; still used by variations/
+│       └── card-*.png                    — ORIGINAL card art; ONLY used by variations/ now
+│                                            (the closing page is HTML — see renderEnd())
 └── .gitignore
 ```
 

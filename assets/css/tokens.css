@@ -6,6 +6,7 @@
 	--color-surface:      #ffffff;
 	--color-text:         #1a1a1a;
 	--color-text-muted:   #6b6b6b;
+	--color-text-secondary: #455057;
 	--color-primary:      #c00000; /* placeholder — awaiting Figma value */
 	--color-accent:       #e87722; /* placeholder — awaiting Figma value */
 	--color-border:       #e0e0e0;
@@ -42,6 +43,7 @@
 	/* Line heights */
 	--line-height-tight:  1.2;
 	--line-height-snug:   1.4;
+	--line-height-relaxed: 1.5;
 	--line-height-normal: 1.6;
 	--line-height-loose:  1.8;
 
@@ -104,7 +106,13 @@
 	   Everything else (fan offsets, page heights, arrow anchors) is derived from
 	   these in app.js, so a resize is a two-token edit with no re-tuning. */
 	--sketchbook-page-w:        340px;
-	--sketchbook-page-h:        420px;
+	/* Sized against the TALLEST page, measured — the claims page needs 477px, and it
+	   is the tallest in ALL FOUR personas (same copy everywhere), so one height fits
+	   all; a per-persona height would compute 477 four times.
+	   Slack is only 8px — deliberately tight. Re-measure after ANY copy/type/padding
+	   change: .page__content is overflow:hidden, so an overrun vanishes silently
+	   (gotchas #19), and there is far less margin for error than there used to be. */
+	--sketchbook-page-h:        485px;
 
 	/* Fan shape — how far each page STEPS OUT from the one in front of it, and how
 	   much NARROWER it gets, per step of depth. Ratios of page-w (not px) so the
@@ -126,12 +134,24 @@
 	--sketchbook-illo-ratio:    0.4417;   /* 318 / 720 — band height as a share of page-w */
 	--sketchbook-illo-bg:       #FEF4F3;  /* sampled from the artwork's blush panel */
 
-	/* Text column. Tuned against the DENSEST page (Pregnancy/newborn claims:
-	   heading + body + 3 bullets + note + button), which is the only one that gets
-	   near the page height — every other page has 60px+ to spare. If that section's
-	   copy grows, this is what gives. */
-	--sketchbook-page-pad:      12px 18px 12px;
+	/* Text column. The densest page (Pregnancy/newborn claims: heading + body +
+	   3 coverage lines + note + button) is the one that gets near the page height;
+	   every other page has 50px+ to spare. Changing this moves --sketchbook-page-h:
+	   each 1px of vertical padding costs 2px of page height. */
+	--sketchbook-page-pad:      16px;
+	/* Vertical rhythm inside a page. -page-gap is the DEFAULT between siblings;
+	   the two below are per-pair overrides (see .page-body in styles.css):
+	   a heading binds tightly to the paragraph it introduces, an action stands
+	   further off the content above it. */
 	--sketchbook-page-gap:      6px;
+	--sketchbook-gap-heading-text:   4px;
+	--sketchbook-gap-content-action: 8px;
+
+
+	/* Gutter — hairline down the spine separating the two facing pages. Sits above
+	   the resting spread but below a turning leaf, so the page sweeps over it. */
+	--sketchbook-gutter-w:      1px;
+	--sketchbook-gutter-color:  #eee;
 
 	/* Framing — white paper backdrop masks mid-flip spine gaps; soft even shadow. */
 	--sketchbook-paper-bg:      #ffffff;
