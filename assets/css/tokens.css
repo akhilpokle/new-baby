@@ -105,14 +105,21 @@
 	/* Page geometry — the only two values to change when resizing the book.
 	   Everything else (fan offsets, page heights, arrow anchors) is derived from
 	   these in app.js, so a resize is a two-token edit with no re-tuning. */
-	--sketchbook-page-w:        340px;
-	/* Sized against the TALLEST page, measured — the claims page needs 477px, and it
-	   is the tallest in ALL FOUR personas (same copy everywhere), so one height fits
-	   all; a per-persona height would compute 477 four times.
-	   Slack is only 8px — deliberately tight. Re-measure after ANY copy/type/padding
-	   change: .page__content is overflow:hidden, so an overrun vanishes silently
-	   (gotchas #19), and there is far less margin for error than there used to be. */
-	--sketchbook-page-h:        485px;
+	/* 400px is the WIDEST page that still fits the 1024px floor: the book's footprint
+	   is 2.1 × page-w + 144px of arrows (measured), leaving 20px either side at 1024.
+	   Going wider needs a higher minimum viewport — the book does not scale with the
+	   stage (gotchas #17). Gives a ~368px text column ≈ 55 characters of body copy;
+	   a 75-character measure would need a 537px page and a ~1280px floor. */
+	--sketchbook-page-w:        400px;
+	/* Sized against the TALLEST page, measured — the claims page, which needs 482px at
+	   the current 400px width. Slack is only 8px, deliberately tight. Confirmed clean
+	   (no clipping, no horizontal overflow at 1024px) across all 4 personas.
+	   Re-measure after ANY copy/type/padding change: .page__content is
+	   overflow:hidden, so an overrun vanishes silently (gotchas #19).
+	   NOTE: page-w moves this too — the illustration band is page-w × illo-ratio, so
+	   widening adds ~0.44px of band per 1px of width, partly offsetting the lines
+	   saved by wrapping less. */
+	--sketchbook-page-h:        490px;
 
 	/* Fan shape — how far each page STEPS OUT from the one in front of it, and how
 	   much NARROWER it gets, per step of depth. Ratios of page-w (not px) so the
