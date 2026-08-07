@@ -460,17 +460,31 @@ function renderSection(section) {
     </div>`;
 }
 
-// TLDR page: a contents-page summary, one line per section that follows, in the
-// same order — so it doubles as a map of the book. Text-only (no illustration):
-// the illustrated pages spend ~150px of the 420px page height on art, and the
-// 6-item persona needs that height for the list. A tinted band (matching
-// --sketchbook-illo-bg) stands in for the missing illustration so the page still
-// reads as part of the same set.
+// TLDR page: a contents-page summary, one row per section that follows, in the
+// same order — so it doubles as a map of the book, and each row jumps to its
+// benefit. Text-only (no illustration): the illustrated pages spend ~175px of the
+// page height on art, and the 6-item persona needs that height for the list.
+
+// Which spread a summary row jumps to. The TLDR is pages[0] and section k is
+// pages[k+1]; page p shows on spread ceil(p/2) — an even p is a leaf's FRONT (the
+// right page of that spread), an odd p is the previous leaf's BACK (the left page
+// of the next one). So row i targets ceil((i+1)/2), and the two rows whose
+// sections share a spread resolve to the same scene.
+// Depends on letterPages() putting the TLDR first — keep the two in step.
+const sceneForTldrItem = (i) => Math.ceil((i + 1) / 2);
+
 function renderTldr(tldr) {
-  // Each item is one paragraph — "Label: text" — not a heading + paragraph pair.
-  // Still only the two page formats (this page's own h3 is the only heading on it).
-  const items = tldr.items.map((item) =>
-    `<p class="page-text">${escHtml(item.label)}: ${escHtml(item.text)}</p>`
+  // Each row is a control, not prose, so it sits outside the two-text-format rule
+  // the same way .page-btn does. The number stays OUTSIDE .page-jump__body so the
+  // divider runs under the text only, not the full width of the row.
+  const items = tldr.items.map((item, i) =>
+    `<button class="page-jump" type="button" data-jump-scene="${sceneForTldrItem(i)}">
+        <span class="page-jump__num">${i + 1}</span>
+        <span class="page-jump__body">
+          <span class="page-jump__text">${escHtml(item.label)}: ${escHtml(item.text)}</span>
+          <img class="page-jump__arrow" src="assets/img/arrow-right_16.png" alt="" width="16" height="16">
+        </span>
+      </button>`
   ).join('');
   const footer = tldr.footer
     ? `<p class="page-text">${escHtml(tldr.footer)}</p>`
@@ -478,9 +492,52 @@ function renderTldr(tldr) {
   return `<div class="page-body">
       <h3 class="page-heading">${escHtml(tldr.heading)}</h3>
       <p class="page-text">${escHtml(tldr.lead)}</p>
-      ${items}
+      <div class="page-jump-list">
+        <div class="page-jump-highlight" aria-hidden="true"></div>
+        ${items}
+      </div>
       ${footer}
     </div>`;
+}
+
+// One highlight box shared by every jump row, instead of each row styling its own
+// hover state. It appears at whichever row the pointer first enters, then SLIDES
+// to follow — position (translateY) and height are read from the row's own
+// offsetTop/offsetHeight, so it tracks rows that wrap to 2 lines correctly.
+//
+// The CSS transition (.page-jump-highlight, styles.css) can carry a delay on
+// transform/height for a "catch-up" lag on the follow rather than an instant snap
+// — currently commented out there, but the plumbing below doesn't care either way.
+// Whatever that transition is, it must NOT apply to the very first appearance —
+// sliding in from translateY(0)/height:0 (its resting values) would look like the
+// box animating up from the top of the list no matter which row you entered first.
+// So the first move sets transform/height via an inline `transition` override that
+// only mentions opacity; every move after that clears the override and lets the
+// stylesheet rule run normally.
+function initTldrHighlight(pageEl) {
+  const highlight = pageEl.querySelector('.page-jump-highlight');
+  const rows      = [...pageEl.querySelectorAll('.page-jump')];
+  if (!highlight || !rows.length) return;
+
+  let everShown = false;
+
+  const moveTo = (row) => {
+    highlight.style.transition = everShown ? '' : 'opacity 0.15s ease';
+    everShown = true;
+    highlight.style.transform = `translateY(${row.offsetTop}px)`;
+    highlight.style.height    = row.offsetHeight + 'px';
+    highlight.classList.add('is-visible');
+  };
+
+  rows.forEach((row) => row.addEventListener('mouseenter', () => moveTo(row)));
+
+  // Leaving the whole list (not just one row) hides the box and resets the
+  // "first show" flag, so re-entering elsewhere appears fresh rather than
+  // sliding in from wherever it was last seen.
+  pageEl.querySelector('.page-jump-list').addEventListener('mouseleave', () => {
+    highlight.classList.remove('is-visible');
+    everShown = false;
+  });
 }
 
 // The letter page: branded hero (Congratulations lockup is baked into the art,
@@ -656,6 +713,9 @@ function fanExtent(leafCount) {
 
 // Lock duration = the flip's visible length. Reduced motion turns instantly (CSS).
 const FLIP_MS = reducedMotion ? 0 : (parseFloat(css.getPropertyValue('--sketchbook-flip-duration')) || 700);
+// Gap between turns in a multi-page jump. Deliberately shorter than FLIP_MS so the
+// pages overlap into a riffle instead of turning one fully at a time.
+const JUMP_STEP_MS = reducedMotion ? 0 : (parseFloat(css.getPropertyValue('--sketchbook-jump-step')) || 300);
 
 let currentScene = 0;
 let isFlipping   = false;   // input lock while a page is mid-turn
@@ -702,11 +762,16 @@ function updateSketchNav() {
   nextBtns.forEach((b) => { if (b.tagName === 'BUTTON') b.disabled = isFlipping || currentScene >= LAST_SCENE; });
 }
 
-// Turn one page. dir = +1 (next) or -1 (prev).
-function turnPage(dir) {
-  const target = currentScene + dir;
-  if (isFlipping || target < 0 || target > LAST_SCENE) return;   // locked or at a bound
-  const from = currentScene;
+// One page-turn, with NO input lock of its own — turnPage and jumpToScene each
+// manage the lock, because a cascade holds it across several turns.
+// `lift` is the z the moving leaf rides at during its sweep: a cascade starts the
+// next turn before the previous has landed, so each in-flight leaf needs its own
+// (increasing) level or they fight for stacking order at an equal z.
+// Returns false at a bound so a caller can stop.
+function flipStep(dir, lift) {
+  const from   = currentScene;
+  const target = from + dir;
+  if (target < 0 || target > LAST_SCENE) return false;
   currentScene = target;
 
   // Exactly one leaf flips between adjacent scenes: leaf 0 on 1↔2, leaf 1 on 2↔3 …
@@ -714,20 +779,69 @@ function turnPage(dir) {
   const movingKey = Math.min(from, target);
   const moving    = leafEls[movingKey];
 
-  isFlipping = true;
-  applyScene(currentScene);                 // targets + settled z; transitions start
-  if (moving) moving.style.zIndex = 100;    // ride above everything during the sweep
-  updateSketchNav();                        // lock both arrows for the turn
+  applyScene(currentScene);                  // targets + settled z; transitions start
+  if (moving) moving.style.zIndex = lift;    // ride above everything during the sweep
 
   setTimeout(() => {
+    // Reads currentScene at settle time, not capture time — during a cascade the
+    // book has moved on, and this leaf belongs wherever it now sits.
+    if (moving) moving.style.zIndex = slotAt(movingKey, currentScene, LEAF_COUNT).z;
+  }, FLIP_MS);
+  return true;
+}
+
+// Turn one page. dir = +1 (next) or -1 (prev).
+function turnPage(dir) {
+  if (isFlipping) return;                    // locked mid-turn
+  if (!flipStep(dir, 100)) return;           // at a bound
+  isFlipping = true;
+  updateSketchNav();                         // lock both arrows for the turn
+  setTimeout(() => {
     isFlipping = false;
-    if (moving) moving.style.zIndex = slotAt(movingKey, currentScene, LEAF_COUNT).z;   // settle z
     updateSketchNav();
   }, FLIP_MS);
 }
 
+// Jump straight to a spread, riffling through the pages in between rather than
+// cutting. Turns start every JUMP_STEP_MS — shorter than the flip itself, so the
+// pages overlap and cascade. The input lock is held for the whole run plus the
+// final flip, so arrows/keys can't interleave with it.
+function jumpToScene(target) {
+  if (isFlipping || target === currentScene || target < 0 || target > LAST_SCENE) return;
+  const dir = target > currentScene ? 1 : -1;
+  let lift  = 100;
+
+  isFlipping = true;
+  updateSketchNav();
+
+  const step = () => {
+    if (currentScene === target || !flipStep(dir, lift++)) {
+      setTimeout(() => {                     // let the last sweep land before unlocking
+        isFlipping = false;
+        updateSketchNav();
+      }, FLIP_MS);
+      return;
+    }
+    setTimeout(step, JUMP_STEP_MS);
+  };
+  step();
+}
+
 const nextPage = () => turnPage(1);
 const prevPage = () => turnPage(-1);
+
+// Summary-page jump rows. Click is delegated (the pages are injected by
+// buildBook(), and rows only exist while a letter has a tldr block); the shared
+// hover highlight is wired directly to each row (mouseenter doesn't bubble, so it
+// can't be delegated the same way) — harmless to call with no rows present, since
+// initTldrHighlight() no-ops when the page has no .page-jump elements.
+if (bookEl) {
+  bookEl.addEventListener('click', (e) => {
+    const row = e.target.closest('[data-jump-scene]');
+    if (row) jumpToScene(parseInt(row.dataset.jumpScene, 10));
+  });
+  initTldrHighlight(bookEl);
+}
 
 prevBtns.forEach((b) => b.addEventListener('click', prevPage));
 nextBtns.forEach((b) => b.addEventListener('click', nextPage));
@@ -738,6 +852,77 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowRight')     nextPage();
   else if (e.key === 'ArrowLeft') prevPage();
 });
+
+// ── Wheel: scrolling over the open book turns pages ───────────────────────────
+// Vertical only — mixing in deltaX makes diagonal trackpad movement flip by
+// accident. Registered non-passive because it has to preventDefault().
+const WHEEL_THRESHOLD = parseFloat(css.getPropertyValue('--sketchbook-wheel-threshold')) || 100;
+const WHEEL_IDLE_MS   = parseFloat(css.getPropertyValue('--sketchbook-wheel-idle'))      || 120;
+
+let wheelAccum     = 0;
+let wheelIdleTimer = 0;
+
+// deltaMode differs by device/OS: 0 = pixels (trackpads, most mice), 1 = lines,
+// 2 = pages. Without this a "line" of 3 and a pixel delta of 3 would count the
+// same, so a line-mode mouse would need ~33 notches for one page turn.
+function normaliseWheel(e) {
+  if (e.deltaMode === 1) return e.deltaY * 16;                       // ~1 line ≈ 16px
+  if (e.deltaMode === 2) return e.deltaY * backdropEl.clientHeight;  // 1 page
+  return e.deltaY;
+}
+
+if (backdropEl) {
+  backdropEl.addEventListener('wheel', (e) => {
+    if (!backdropEl.classList.contains('is-visible')) return;
+    // Prototype-only control — let it scroll/behave normally.
+    if (e.target.closest && e.target.closest('.persona-switcher')) return;
+
+    // If the backdrop genuinely overflows (short viewport — the book needs ~610px
+    // and the page is only 490px of that), native scrolling MUST keep working or
+    // the user can't reach the parts of the book that are off-screen. Only take
+    // over once scrolled hard against the edge in the direction of travel.
+    if (backdropEl.scrollHeight > backdropEl.clientHeight) {
+      const atTop    = backdropEl.scrollTop <= 0;
+      const atBottom = backdropEl.scrollTop + backdropEl.clientHeight >= backdropEl.scrollHeight - 1;
+      if ((e.deltaY < 0 && !atTop) || (e.deltaY > 0 && !atBottom)) return;
+    }
+
+    e.preventDefault();
+
+    // Gesture boundary: once the wheel goes quiet, drop any partial accumulation
+    // so a half-swipe doesn't add to the next, unrelated one.
+    clearTimeout(wheelIdleTimer);
+    wheelIdleTimer = setTimeout(() => { wheelAccum = 0; }, WHEEL_IDLE_MS);
+
+    // Discard input mid-flip (covers the jump cascade too). This is what stops
+    // trackpad momentum — which keeps firing for ~1s after the fingers lift —
+    // from queueing up three or four extra turns off one flick.
+    if (isFlipping) { wheelAccum = 0; return; }
+
+    wheelAccum += normaliseWheel(e);
+    if (Math.abs(wheelAccum) < WHEEL_THRESHOLD) return;
+
+    turnPage(wheelAccum > 0 ? 1 : -1);   // no-ops at the bounds
+    wheelAccum = 0;
+  }, { passive: false });
+}
+
+// ── Feedback (chrome row) ─────────────────────────────────────────────────────
+// Persistent rather than end-of-book, so people who drop off part-way are still
+// asked. Swaps to a thank-you on vote — asked once, not nagged all session.
+// The prompt lives in the chrome, NOT on a page: pages have ~8px of height slack
+// (gotchas #19) and this would clip.
+const feedbackEl = document.querySelector('[data-feedback]');
+if (feedbackEl) {
+  feedbackEl.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-vote]');
+    if (!btn) return;
+    // TODO(api): POST { vote, spread: currentScene, persona } — the SPREAD matters:
+    // a thumbs rating alone says nothing about where people give up, which is the
+    // actual drop-off question. Pair it with furthest-spread-reached per session.
+    feedbackEl.textContent = 'Thanks for letting us know';
+  });
+}
 
 // Publish the fan's widest extent to CSS — the arrows anchor to these, and a
 // deeper fan (more leaves) reaches further, so they can't be static tokens.

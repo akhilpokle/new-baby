@@ -45,6 +45,9 @@ across browsers.
 | `--sketchbook-fan-w-ratio` | `FAN_W` | Fan narrowing per depth, × `PAGE_W` |
 | `--sketchbook-book-tilt` | `BOOK_TILT` | Constant lean on every page's rest angle |
 | `--sketchbook-flip-duration` | `FLIP_MS` | Flip length + the input-lock window |
+| `--sketchbook-jump-step` | `JUMP_STEP_MS` | Gap between turns when a summary row jumps several spreads |
+| `--sketchbook-wheel-threshold` | `WHEEL_THRESHOLD` | Normalised wheel delta needed for one page turn |
+| `--sketchbook-wheel-idle` | `WHEEL_IDLE_MS` | Quiet time that ends a wheel gesture and clears the accumulator |
 
 `--ease-factor` is **legacy** — the stork moved on a proportional lerp; it now moves
 at the constant `--stork-speed`. The token is left in `tokens.css` but unused by JS.

@@ -176,11 +176,75 @@ of a flip. The box's `transform` transition must stay in sync with the leaf's
 `applyScene` sets `inert` on everything at depth ≠ 0 and on the hidden face of the
 two active leaves. Without it, `Tab` walks into buried off-screen pages (gotchas #21).
 
+### Chrome row (nav hint + feedback)
+A persistent one-line row under the book (`.sketchbook__chrome`), inside
+`.sketchbook` so book + chrome centre as one unit. Nav hint left, feedback right —
+it spends **horizontal** space (the spread is 800px wide and that row was empty)
+rather than stacking. Stacking the two would cost ~122px and **overflow a 1366×768
+laptop**, and once `.delivery-backdrop` starts scrolling, scroll-to-flip hands
+control back to the browser — so the layout choice and the wheel feature are
+coupled. Measured: 526px assembly clears a 648px viewport with 49px spare.
+
+⚠️ **The arrows and edge zones anchor to `calc(--sketchbook-page-h / 2)`, not
+`top: 50%`.** `.sketchbook` is taller than the book now, so 50% drops both ~16px
+below the page they belong to. Silent misalignment if anyone "simplifies" it back.
+
+Feedback is **persistent, not end-of-book**, so people who drop off part-way are
+still asked; it swaps to a thank-you on vote (asked once, not nagged). It lives in
+the chrome and *not* on a page because pages have ~8px of height slack (gotchas
+#19) and it would clip.
+
+> `TODO(api)` in `app.js`: POST the vote **with the spread it was cast on**. A
+> thumbs rating alone doesn't answer the drop-off question it was added for —
+> that needs furthest-spread-reached per session, which is the instrument to add
+> at Liferay time.
+
 ### Navigation
+- **Summary-page jump rows share ONE hover highlight**, not a per-row hover state.
+  `initTldrHighlight()` (`app.js`) slides `.page-jump-highlight` to whichever row
+  fires `mouseenter`, reading that row's live `offsetTop`/`offsetHeight` so it
+  tracks rows that wrap to 2 lines. The CSS transition *can* carry a delay on
+  `transform`/`height` (not `opacity`) for a slight "catch-up" lag on the *follow*
+  — **currently commented out** in `styles.css` (`.page-jump-highlight`), the
+  no-delay line left active. Uncomment to bring the lag back.
+  Independent of whether that delay is on: the very *first* appearance must skip
+  the transition entirely, or the box visibly slides in from `translateY(0)`
+  regardless of which row you entered first. That's done with an inline
+  `style.transition` override that names only `opacity`, cleared on the next move
+  so the stylesheet's rule takes over. Leaving the list resets the "first show"
+  flag, so re-entering elsewhere appears fresh rather than sliding in from its
+  last position.
+- **Summary-page jump rows.** Each "At a glance" row is a `<button>` that flips the
+  book to its benefit, riffling through the pages in between (`jumpToScene()`).
+  Turns start every `--sketchbook-jump-step` (300ms) — shorter than the 700ms flip,
+  so they overlap; each in-flight leaf gets its own increasing z or they fight for
+  stacking order. The target comes from `sceneForTldrItem(i) = ceil((i+1)/2)`, which
+  **assumes `letterPages()` puts the TLDR at index 0** — change one and the rows
+  point at the wrong spreads with no error. Two rows share a scene whenever their
+  sections are the two facing pages of one spread; that is correct, not a bug.
 - Circular arrows flank the book, anchored to `--sketchbook-content-left/right`,
   which **JS writes from the leaf count** (a deeper fan reaches further, so these
   can't be static tokens). Disabled at the bounds.
 - **Keyboard:** ← / → while the book is open.
+- **Wheel / scroll** turns pages while the book is open (vertical only — mixing in
+  `deltaX` makes diagonal trackpad movement flip by accident). Three things make
+  this behave, and all three matter:
+  1. **Deltas are normalised by `deltaMode`** (0 px / 1 line / 2 page). Raw
+     `deltaY` is not comparable across devices — a line-mode mouse reports ~3 per
+     notch against a trackpad's ~8 px, so without this one of them needs ~30
+     notches per turn.
+  2. **Input is discarded while `isFlipping`.** This is what tames trackpad
+     momentum, which keeps firing for ~1s after the fingers lift — otherwise one
+     flick queues three or four turns. Verified: 320px of delta in a 40-event
+     burst produces exactly one flip.
+  3. **Native scroll wins when the backdrop actually overflows.** The book needs
+     ~610px of viewport; below that `.delivery-backdrop` scrolls, and
+     unconditionally calling `preventDefault()` would leave the off-screen part of
+     the book unreachable. The handler only takes over at the top/bottom edge in
+     the direction of travel.
+
+  Tuning lives in `--sketchbook-wheel-threshold` / `-wheel-idle`. Touch devices
+  aren't handled (`touchmove`) — the prototype is desktop-only.
 - **Edge click-zones:** thin `aria-hidden` strips over each page's outer edge.
 - **Caption:** visually-hidden `aria-live="polite"` region, generated from the
   section headings on show.

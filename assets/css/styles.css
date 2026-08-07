@@ -152,8 +152,6 @@ body {
 }
 
 /* ─── Sparkle trail ───────────────────────────────────────────────────────── */
-html { cursor: none; }
-
 .sparkle {
 	position: fixed;
 	pointer-events: none;
@@ -229,7 +227,7 @@ html { cursor: none; }
 	opacity: 0;
 	pointer-events: none;
 	transition: opacity 0.4s ease;
-	cursor: default; /* override the global cursor:none so the splash buttons are usable */
+	cursor: default;
 }
 
 .intro-overlay.is-visible {
@@ -351,7 +349,7 @@ html { cursor: none; }
 	display: flex;
 	justify-content: center;
 	align-items: flex-start;
-	padding: 80px 16px 40px;
+	padding: var(--sketchbook-backdrop-pad-y) var(--sketchbook-backdrop-pad-x) var(--sketchbook-backdrop-pad-bottom);
 }
 
 .delivery-backdrop.is-visible {
@@ -567,6 +565,95 @@ html { cursor: none; }
 	justify-content: center;
 }
 
+/* ── Summary-page jump rows ────────────────────────────────────────────────
+   The "At a glance" items are navigation, not prose — each row flips the book to
+   the spread its benefit lives on. Controls, so exempt from the two-text-format
+   rule above, the same way .page-btn is. */
+.page-jump-list {
+	position: relative;    /* offset parent for .page-jump-highlight */
+	align-self: stretch;   /* .page-body is align-items:flex-start, so opt out of shrink-to-fit */
+	/* Rows carry their own --sketchbook-jump-pad on the sides. Pulling the list out
+	   by (jump-pad − page-pad) puts the row TEXT on the same left edge as the
+	   heading, lead and footer, while the hover band extends past it on both sides. */
+	margin-inline: calc(var(--sketchbook-jump-pad) - var(--sketchbook-page-pad));
+}
+
+/* ONE shared highlight box, not a per-row hover state. app.js slides it to the
+   row under the pointer (translateY + height, both read from the row's own
+   offsetTop/offsetHeight so it tracks rows that wrap to 2 lines). z-index:-1 sits
+   it behind the (unpositioned, so stacked above by default) row content — see
+   initTldrHighlight() in app.js for why transform/height skip the transition on
+   the very first show but not on later moves. */
+.page-jump-highlight {
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 0;
+	height: 0;
+	z-index: -1;
+	background: var(--semantic-color-fill-hover);
+	border-radius: 8px;
+	opacity: 0;
+	pointer-events: none;
+	/* "Catch-up" lag disabled for now — was 60ms of delay on transform/height so the
+	   follow started a beat after the pointer moved. Uncomment to bring it back. */
+	/* transition: transform 0.2s ease 60ms, height 0.2s ease 60ms, opacity 0.15s ease; */
+	transition: transform 0.2s ease, height 0.2s ease, opacity 0.15s ease;
+}
+.page-jump-highlight.is-visible { opacity: 1; }
+
+.page-jump {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--sketchbook-jump-num-gap);   /* number → text — distinct from -jump-pad */
+	width: 100%;
+	padding: var(--sketchbook-jump-pad) var(--sketchbook-jump-pad) 0;
+	border: 0;
+	background: none;
+	font: inherit;
+	color: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+/* Divider sits on the body, not the row, so it runs under the text only — the
+   number hangs outside it. */
+.page-jump__body {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: var(--sketchbook-jump-pad);
+	padding-bottom: var(--sketchbook-jump-pad);
+	border-bottom: 1px solid var(--sketchbook-jump-border);
+}
+
+.page-jump__num,
+.page-jump__text {
+	font-size: var(--font-size-sm);
+	line-height: var(--line-height-relaxed);
+	color: var(--color-text-secondary);
+}
+/* :hover on the row itself — independent of the shared highlight box, which only
+   handles the background. Native browser :hover, so no JS involved here. */
+.page-jump:hover .page-jump__num,
+.page-jump:hover .page-jump__text {
+	color: var(--semantic-color-text);
+}
+.page-jump__num { flex-shrink: 0; width: var(--sketchbook-jump-num-w); }
+
+/* Arrow icon (assets/img/arrow-right_16.png), 16×16 native — no CSS recolouring,
+   so it reads at whatever grey the asset ships with. margin-top centres it on the
+   FIRST line of a wrapping row (21px line-height), not the whole text block. */
+.page-jump__arrow {
+	flex-shrink: 0;
+	width: 16px;
+	height: 16px;
+	margin-top: 2.5px;
+	display: block;
+}
+
 /* Two link styles — see renderLink() in app.js for which one a label gets.
    `--unresolved` variants have no destination yet (the content names a CMS
    template instead of a URL), so they render inert.
@@ -604,9 +691,13 @@ html { cursor: none; }
 /* ── Navigation: edge click-zones + arrow buttons ── */
 /* Click-zones are thin strips over the OUTER edge of each page (grab-the-edge
    metaphor). prev sits over the left page's outer edge, next over the right. */
+/* NOTE: anchored to the BOOK's centre (page-h / 2 from the top of .sketchbook,
+   where the book is the first child) — NOT `top: 50%`. .sketchbook is taller than
+   the book now that it also holds .sketchbook__chrome, so 50% would drop these
+   ~16px below the page they belong to. Same reason on .sketchbook__arrow. */
 .sketchbook__zone {
 	position: absolute;
-	top: 50%;
+	top: calc(var(--sketchbook-page-h) / 2);
 	transform: translateY(-50%);
 	height: var(--sketchbook-page-h);
 	width: var(--sketchbook-zone-w);
@@ -620,7 +711,7 @@ html { cursor: none; }
    the fan grows/shrinks. Positioned relative to .sketchbook (left edge = book-x 0). */
 .sketchbook__arrow {
 	position: absolute;
-	top: 50%;
+	top: calc(var(--sketchbook-page-h) / 2);   /* book centre, not .sketchbook centre — see .sketchbook__zone */
 	transform: translateY(-50%);
 	width: var(--sketchbook-arrow-size);
 	height: var(--sketchbook-arrow-size);
@@ -650,6 +741,54 @@ html { cursor: none; }
 }
 .sketchbook__arrow--prev::before { transform: translate(-30%, -50%) rotate(-135deg); }
 .sketchbook__arrow--next::before { transform: translate(-70%, -50%) rotate(45deg); }
+
+/* ── Chrome row: persistent nav hint + feedback ────────────────────────────
+   One line under the book. Hint left, feedback right — spending HORIZONTAL space
+   (the spread is 800px wide and this row was empty) rather than stacking, which
+   would cost ~122px and overflow a 1366×768 laptop. Sits on the dark blurred
+   backdrop, so the text is light. */
+.sketchbook__chrome {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-4);
+	margin-top: var(--sketchbook-chrome-gap);
+	width: calc(var(--sketchbook-page-w) * 2);   /* matches the spread's outer edges */
+	color: var(--sketchbook-chrome-text);
+	font-size: var(--font-size-sm);
+	line-height: var(--line-height-relaxed);
+	/* Light text directly on the blurred scene behind it — contrast varies with
+	   whatever's back there. Shadow set on the row (not hint/feedback separately)
+	   so it still applies after voting swaps the feedback text to a thank-you. */
+	text-shadow: 1px 0px 3px rgba(0, 0, 0, 0.25);
+}
+
+.sketchbook__hint { margin: 0; }
+
+.sketchbook__feedback {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	flex-shrink: 0;
+}
+
+/* Emoji placeholder — swap for real icons when the assets land. */
+.feedback-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: var(--space-5);
+	height: var(--space-5);
+	padding: 0;
+	border: 0;
+	border-radius: var(--radius-sm);
+	background: none;
+	font-size: var(--font-size-sm);
+	line-height: 1;
+	cursor: pointer;
+	transition: background 0.2s;
+}
+.feedback-btn:hover { background: var(--sketchbook-chrome-hover); }
 
 /* Visually-hidden live region — announces the current spread to screen readers. */
 .sr-only {
@@ -699,8 +838,6 @@ html { cursor: none; }
 	background: #f0f0f0;
 }
 
-/* Restore cursor when delivery card is shown — overrides html { cursor: none } for
-   body and all its descendants so the normal pointer reappears over the card. */
 body.is-delivered {
 	cursor: default !important;
 }
@@ -720,6 +857,9 @@ body.is-delivered {
 	.page,
 	.page__content {
 		transition: none;
+	}
+	.page-jump-highlight {
+		transition: opacity 0.15s ease;   /* keep the fade; drop the slide + its delay */
 	}
 }
 
@@ -741,7 +881,7 @@ body.is-delivered {
 	border: 1px solid var(--semantic-color-border);
 	border-radius: var(--radius-md);
 	box-shadow: 0 4px 14px rgba(23, 39, 51, 0.20);
-	cursor: default;   /* override the global html { cursor: none } */
+	cursor: default;
 }
 .persona-switcher__label {
 	margin: 0 0 var(--space-1);

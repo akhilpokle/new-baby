@@ -37,8 +37,8 @@ styles under "Intro splash" in `styles.css`.
 - The splash stork shares the same sprite frame as the stage stork (the wing
   `setInterval` swaps `src` on both), so the hand-off is seamless and same-size
   (227 × 173, matched exactly in CSS).
-- `cursor: default` is set on the overlay so the buttons are usable despite the
-  global `html { cursor: none }`.
+- `cursor: default` is set on the overlay (harmless now the OS cursor is visible
+  throughout — see "Sparkle trail" below — but kept in case that changes again).
 
 ### "Let's go" → the fly-down
 
@@ -283,7 +283,9 @@ so all clouds appear mid-cycle on page load (no initial snap).
 
 ## Sparkle trail
 
-The OS cursor is hidden globally (`html { cursor: none }`). On every `mousemove`
+The OS cursor is visible throughout (an earlier `html { cursor: none }`, from when
+a custom arrow graphic stood in for it, was removed — that arrow itself was already
+gone, replaced by this sparkle trail, in commit `c94de6d`). On every `mousemove`
 event (throttled to one per 50 ms), a `div.sparkle` containing `✦` is appended
 to `document.body` at the client-space cursor position and removed when its
 CSS animation ends.

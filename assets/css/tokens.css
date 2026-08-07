@@ -155,6 +155,40 @@
 	--sketchbook-gap-content-action: 8px;
 
 
+	/* Chrome row under the book — persistent nav hint + feedback, on ONE line so it
+	   costs ~33px of vertical space instead of ~122px stacked (which overflows a
+	   1366×768 laptop and, once the backdrop scrolls, disables scroll-to-flip).
+	   Text sits on the dark blurred backdrop, hence the light colour. */
+	--sketchbook-chrome-gap:    12px;   /* book → chrome */
+	--sketchbook-chrome-text:   #DCE4EA;
+	--sketchbook-chrome-hover:  rgba(255, 255, 255, 0.14);
+
+	/* Backdrop padding — acts as a MINIMUM margin (the book is centred anyway), so
+	   these only matter on short windows. Kept small enough that book + chrome still
+	   clear a 640px-tall viewport without the backdrop scrolling. */
+	--sketchbook-backdrop-pad-y:     56px;
+	--sketchbook-backdrop-pad-x:     16px;
+	--sketchbook-backdrop-pad-bottom: 32px;
+
+	/* Wheel navigation — scrolling over the open book turns pages. Read by app.js.
+	   -wheel-threshold is accumulated (normalised) delta needed for one turn: a
+	   mouse notch is ~100px, so one notch = one page; a trackpad needs a deliberate
+	   swipe. -wheel-idle is how long without a wheel event before the accumulator
+	   resets, which separates one gesture from the next. */
+	--sketchbook-wheel-threshold: 100;
+	--sketchbook-wheel-idle:      120ms;
+
+	/* Summary-page jump rows — numbered links that flip the book to their benefit.
+	   -jump-pad is the row's own padding; the list is pulled out by
+	   (jump-pad − page-pad) so row TEXT still lines up with the heading and lead.
+	   -jump-step is how fast a multi-page jump cascades (one flip starts every
+	   step, so they overlap — the flip itself is still -flip-duration). */
+	--sketchbook-jump-pad:      8px;
+	--sketchbook-jump-border:   #dde3e7;
+	--sketchbook-jump-step:     300ms;
+	--sketchbook-jump-num-w:    20px;   /* fixed column width, independent of digit count */
+	--sketchbook-jump-num-gap:  0px;    /* number → text, separate from -jump-pad */
+
 	/* Gutter — hairline down the spine separating the two facing pages. Sits above
 	   the resting spread but below a turning leaf, so the page sweeps over it. */
 	--sketchbook-gutter-w:      1px;

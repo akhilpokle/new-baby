@@ -860,6 +860,19 @@
 
 		</div>
 
+		<!-- Chrome row — persistent nav hint + feedback, on ONE line. Lives inside
+		     .sketchbook so book + chrome centre together, which is why the arrows and
+		     edge zones anchor to --sketchbook-page-h rather than .sketchbook's 50%. -->
+		<div class="sketchbook__chrome">
+			<p class="sketchbook__hint">Scroll or use &larr; &rarr; to turn pages</p>
+			<!-- CMS: feedback prompt -->
+			<div class="sketchbook__feedback" data-feedback aria-live="polite">
+				<span class="sketchbook__feedback-q">How was this?</span>
+				<button class="feedback-btn" type="button" data-vote="up" aria-label="I liked this experience">👍</button>
+				<button class="feedback-btn" type="button" data-vote="down" aria-label="I did not like this experience">👎</button>
+			</div>
+		</div>
+
 		<!-- Edge click-zones over the book (mouse): the outer strip of each page turns it.
 		     Keyboard / assistive-tech users use the labelled arrows instead. -->
 		<div class="sketchbook__zone sketchbook__zone--prev" data-sketchbook-prev aria-hidden="true"></div>
