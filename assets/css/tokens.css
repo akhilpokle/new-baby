@@ -111,15 +111,19 @@
 	   stage (gotchas #17). Gives a ~368px text column ≈ 55 characters of body copy;
 	   a 75-character measure would need a 537px page and a ~1280px floor. */
 	--sketchbook-page-w:        400px;
-	/* Sized against the TALLEST page, measured — the claims page, which needs 482px at
-	   the current 400px width. Slack is only 8px, deliberately tight. Confirmed clean
-	   (no clipping, no horizontal overflow at 1024px) across all 4 personas.
+	/* Sized against the TALLEST page, measured — the claims page, which needs 503px
+	   at the current 400px width + 16px/24px page-pad (was 482px at uniform 16px;
+	   the narrower 352px text column pushed extra wrapping — this ALREADY clipped
+	   once at the old 490px before being caught and re-measured). Slack is 8px,
+	   deliberately tight.
+	   ⚠️ Re-verified on Female/Permanent ONLY — the other three personas have not
+	   been re-checked since this padding change.
 	   Re-measure after ANY copy/type/padding change: .page__content is
 	   overflow:hidden, so an overrun vanishes silently (gotchas #19).
 	   NOTE: page-w moves this too — the illustration band is page-w × illo-ratio, so
 	   widening adds ~0.44px of band per 1px of width, partly offsetting the lines
 	   saved by wrapping less. */
-	--sketchbook-page-h:        490px;
+	--sketchbook-page-h:        511px;
 
 	/* Fan shape — how far each page STEPS OUT from the one in front of it, and how
 	   much NARROWER it gets, per step of depth. Ratios of page-w (not px) so the
@@ -143,9 +147,11 @@
 
 	/* Text column. The densest page (Pregnancy/newborn claims: heading + body +
 	   3 coverage lines + note + button) is the one that gets near the page height;
-	   every other page has 50px+ to spare. Changing this moves --sketchbook-page-h:
-	   each 1px of vertical padding costs 2px of page height. */
-	--sketchbook-page-pad:      16px;
+	   every other page has 50px+ to spare. Changing the TOP/BOTTOM values moves
+	   --sketchbook-page-h directly (2px of height per 1px of vertical padding);
+	   changing LEFT/RIGHT narrows the text column instead, which can also grow
+	   height indirectly by pushing lines to wrap. Re-measure after either. */
+	--sketchbook-page-pad:      16px 24px;
 	/* Vertical rhythm inside a page. -page-gap is the DEFAULT between siblings;
 	   the two below are per-pair overrides (see .page-body in styles.css):
 	   a heading binds tightly to the paragraph it introduces, an action stands

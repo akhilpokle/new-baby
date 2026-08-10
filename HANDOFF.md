@@ -275,7 +275,7 @@ the chrome and *not* on a page because pages have ~8px of height slack (gotchas
 | `assets/img/card-*.png` | Original card art — **only used by `variations/`** now; the live closing page is HTML, not `card-end.png` |
 
 ### Key tokens (`tokens.css`)
-`--sketchbook-page-w` (340) / `-page-h` (485) — the two you'd change to resize.
+`--sketchbook-page-w` (400) / `-page-h` (511) — the two you'd change to resize.
 `-page-h` is **measured against the tallest page**, not chosen (see the warning above).
 `--sketchbook-fan-x-ratio` (0.04375) / `-fan-w-ratio` (0.03125) — fan shape.
 `--sketchbook-illo-ratio` (0.4417 = 318/720) / `-illo-bg` (#FEF4F3) — illustration band.
@@ -296,27 +296,35 @@ kebab-case on purpose — GitHub Pages is case-sensitive and spaces need encodin
 ## 5. Open items
 
 ### ⚠️ Page height is measured, not guessed — overruns clip silently
-`--sketchbook-page-h` is `485px`, sized against the **tallest measured page**: the
-claims page (477px), leaving only **8px of slack**. Everything else has 45px+ spare.
+`--sketchbook-page-h` is `511px`, sized against the **tallest measured page**: the
+claims page (499px as of its coverage lines becoming a bulleted list — see below —
+was 503px before), leaving **12px of slack**. Everything else has 50px+ spare.
 
 The claims page is the tallest in **all four personas** (identical copy), so a
-per-persona height would compute the same 477px four times — there is nothing to
-gain there. 477px is also close to the floor: 150px of it is the illustration band,
-and pixel-sampling all six JPGs shows artwork running to the bottom of the blush
-panel in every one, so cropping tighter cuts art rather than whitespace. Widening
-the page doesn't help either (the band scales with width). Full analysis in
-gotchas #19.
+per-persona height would compute the same number four times — there is nothing to
+gain there. It's also close to the floor for a structural reason: ~150px of it is
+the illustration band, and pixel-sampling all six JPGs shows artwork running to the
+bottom of the blush panel in every one, so cropping tighter cuts art rather than
+whitespace.
 
 `.page__content` is `overflow: hidden`, so an overrun **disappears off the bottom
-with no error**. This number has moved four times, each as a side effect of another
-edit rather than a resize request — 420 (shipped broken) → 585 (a `.page-text` type
-change) → 490 (summary items collapsing to one line) → 498 (`--sketchbook-page-pad`
-12/18 → 16) → 485 (slack trimmed to 8px). Re-measure after **any** type, copy or
-padding change (method in gotchas #19); never assume the claims page is still the
-tallest. With only 8px of slack there is now very little room for error.
+with no error**. This number has moved **six** times, and only once on purpose —
+every other move was a side effect of a type, width, or padding edit that had
+nothing to do with height:
 
-At 485px the book fits the 640px-tall floor with no scrolling (485 + 120px backdrop
-padding = 605px).
+| # | `page-h` | Cause |
+|---|---|---|
+| 1 | 420px | shipped **broken** — claims page silently clipped, unnoticed through review |
+| 2 | 585px | `.page-text` type change (13px/1.4 → 14px/1.5) |
+| 3 | 490px | summary items collapsed from heading+paragraph to one line each |
+| 4 | 498px | `--sketchbook-page-pad` 12/18 → uniform 16px |
+| 5 | 485px | *(deliberate)* slack trimmed 21px → 8px |
+| 6 | **511px** | page width 340→400px, then `--sketchbook-page-pad` 16px → `16px 24px` — the narrower 352px text column pushed extra wrapping |
+
+Re-measure after **any** type, width, or padding change (method in gotchas #19);
+never assume the claims page is still the tallest, or that 8px of slack survives
+the next edit. Measured (not computed) at a 640px-tall viewport: the full assembly
+— book + chrome row — is 547px, **35px of spare**, no backdrop scroll.
 
 ### Links need destinations — 7 of 9 have none
 | Link | State |
@@ -399,11 +407,9 @@ the card scales smoothly rather than snapping; open/close snaps with no animatio
 
 ## 7. Git state
 
-- Last commit: **`753851d`** — *"Restyle page buttons, fix dead hover, add persona
-  switcher"*. The content pipeline, derived geometry and real HTML pages are all
-  committed as of `99b6e5c`/`753851d`.
-- **Uncommitted:** the TLDR summary page, the HTML closing page (replacing
-  `card-end.png`), the two-text-format typography pass, the spine gutter, and the
-  485px page height.
-  Modified: `app.js`, `content.js`, `newborn_mtm_templates.json`, `styles.css`,
-  `tokens.css`, `HANDOFF.md`, `docs/architecture.md`, `docs/gotchas.md`.
+- Last pushed commit: **`c19e603`** — *"Add clickable summary jump rows, wheel nav,
+  and persistent feedback"*. Everything through the jump rows, wheel-to-flip,
+  restored cursor and chrome row is committed and on `origin/main`.
+- **Uncommitted:** `--sketchbook-page-pad` changed from uniform `16px` to
+  `16px 24px`, and the resulting `--sketchbook-page-h` bump (490 → 511) to
+  absorb it. Modified: `tokens.css`, `HANDOFF.md`.

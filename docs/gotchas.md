@@ -223,39 +223,48 @@ element just disappears off the bottom. **This has already shipped broken once:*
 went unnoticed through review.
 
 `--sketchbook-page-h` is therefore sized against the **measured tallest page**, not
-guessed. Current state at `485px`, **only 8px of slack** — deliberately tight:
+guessed. Current state at `511px`, **12px of slack** — still deliberately tight:
 
 | Page | Needs | Slack |
 |---|---|---|
-| `Pregnancy/new-born related claims` (all 4 personas — identical copy) | 477 px | 8 px |
-| everything else | ≤ 440 px | 45 px+ |
+| `Pregnancy/new-born related claims` (all 4 personas — identical copy) | 499 px | 12 px |
+| everything else | ≤ 465 px | 46 px+ |
 
 **A per-persona height would gain nothing.** The claims page appears in all four
 personas with identical copy and is the tallest in each, so every persona computes
-the same 477px.
+the same 499px.
 
-Where the 477px goes, and why it is hard to shrink further:
+Where the 499px goes, at the current `--sketchbook-page-w: 400px` /
+`--sketchbook-page-pad: 16px 24px`, coverage as a bulleted `.page-coverage` list
+(measured by cloning, not estimated):
 
 | Part | Height | Reducible? |
 |---|---|---|
-| Illustration band | 150 px (31%) | **No** — pixel-sampled all six JPGs; artwork runs to the bottom of the blush panel in every file, so a tighter crop cuts art, not whitespace |
-| Text content | 259 px | Only by editing DBS copy |
-| Padding (16 × 2) | 32 px | Set deliberately |
-| Inter-element margins | 36 px | Set deliberately |
+| Illustration band | 177 px (35%) | **No** — pixel-sampled all six JPGs; artwork runs to the bottom of the blush panel in every file, so a tighter crop cuts art, not whitespace |
+| Text content (incl. the coverage list) | 267 px | Only by editing DBS copy |
+| Vertical padding (16 × 2) | 32 px | Set deliberately — the 24px *horizontal* value doesn't add height directly, but narrows the column and can push extra wrapping (it did: see history below) |
+| Inter-element margins | 24 px | Set deliberately — dropped from 36px when 3 paragraph gaps collapsed into fewer list-internal gaps (coverage is now one `<ul>`, not 3 `<p>`) |
 
-Widening the page does **not** help: the band is `width × --sketchbook-illo-ratio`,
-so it grows ~9px per 20px of width, cancelling the lines saved by wrapping less.
-Measured: 340→477px, 380→495px, 400→482px, 440→500px. **340px is near-optimal.**
+⚠️ An earlier version of this doc claimed "widening doesn't help, 340px is
+near-optimal" — that was true **at the time**, before the page was deliberately
+widened to 400px for a longer text measure (see `--sketchbook-page-w`'s own
+comment in `tokens.css`). Re-verify any width/height tradeoff claim against the
+*current* tokens rather than trusting a number here; this file has been wrong
+before and will be again.
 
-This number has moved five times: 420 (shipped clipping) → 585 (a `.page-text` type
-change pushed the summary page to 562px) → 490 (summary items collapsed to one line
-each, handing "tallest" back to the claims page) → 498 (`--sketchbook-page-pad`
-12/18 → 16) → 485 (slack trimmed 21px → 8px). All but the last were side effects of
-some *other* edit rather than a resize request.
+This number has moved **six** times, and only once on purpose — every other move
+was a side effect of a type, width, or padding edit that had nothing to do with
+height: 420 (shipped **broken**) → 585 (`.page-text` type change, 13px/1.4 →
+14px/1.5) → 490 (summary items collapsed to one line each) → 498
+(`--sketchbook-page-pad` 12/18 → uniform 16) → 485 *(deliberate: slack trimmed
+21px → 8px)* → **511** (page-w 340→400px, then page-pad → `16px 24px`).
 
 Two rules follow. **Whichever page is tallest changes** — don't assume it's the
-claims page, even though it currently is again. And **`--sketchbook-page-pad` moves
-this token**: each 1px of vertical padding costs 2px of page height.
+claims page, even though it currently is again. And **`--sketchbook-page-pad`
+moves this token from BOTH axes**: vertical padding costs height 1:2 directly;
+horizontal padding costs it indirectly, by narrowing the column enough to push a
+line to wrap. The second one is easy to miss — it doesn't touch any number that
+looks height-related.
 
 Anything touching type, `--sketchbook-page-pad`, `--sketchbook-page-gap`, or any
 page's copy can break this. Re-measure by cloning each page unconstrained — the
@@ -268,11 +277,12 @@ c.style.cssText += ';transform:none;position:static;height:auto;overflow:visible
 document.body.appendChild(c); c.offsetHeight;   // ← the height actually needed
 ```
 
-At `485px` the book fits a 640 px-tall window with no scrolling (485 + 120 px of
-backdrop padding = 605 px, confirmed). Note this margin is not fixed: at `585px`
-(the previous value) the book *exceeded* 640px and needed `.delivery-backdrop`'s
+**Measured** (not computed — this file has hand-computed it wrong before) at a
+640px-tall viewport: the full assembly (book + chrome row) is 547px, **35px
+spare**, no backdrop scroll. Note this margin is not fixed: at `585px` (an earlier
+value) the book *exceeded* 640px and needed `.delivery-backdrop`'s
 `overflow-y: auto` to avoid clipping — that fallback exists and works, but don't
-rely on it; re-check the 640px floor whenever `--sketchbook-page-h` moves.
+rely on it; re-measure the 640px floor whenever `--sketchbook-page-h` moves.
 
 ---
 

@@ -446,10 +446,12 @@ function renderSection(section) {
   const art = section.illustration
     ? `<img class="page-illo" src="${escHtml(section.illustration)}" alt="">`
     : '';
-  // Coverage lines are plain paragraphs, not a bulleted list — the pages use only
-  // two text formats (heading + paragraph); a list would be a third.
+  // Coverage lines are a bulleted list — same text styling as .page-text (the
+  // bullet is structural, not a new type treatment), so this stays a deliberate,
+  // scoped exception to the two-text-format rule elsewhere on this page, requested
+  // specifically for the claims section (the only one that uses coverage[]).
   const coverage = section.coverage
-    ? section.coverage.map((c) => `<p class="page-text">${escHtml(c)}</p>`).join('')
+    ? `<ul class="page-coverage">${section.coverage.map((c) => `<li>${escHtml(c)}</li>`).join('')}</ul>`
     : '';
   const note  = section.note ? `<p class="page-text">${escHtml(section.note)}</p>` : '';
   const links = (section.links || []).map(renderLink).join('');
