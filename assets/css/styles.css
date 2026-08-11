@@ -511,6 +511,16 @@ body {
 .page__content--right { border-radius: 0 var(--sketchbook-radius) var(--sketchbook-radius) 0; box-shadow:  3px 0 4px var(--sketchbook-card-shadow); }
 .page__content--left  { border-radius: var(--sketchbook-radius) 0 0 var(--sketchbook-radius); box-shadow: -3px 0 4px var(--sketchbook-card-shadow); }
 
+/* Blank back face (odd page count) — tiled pattern instead of bare white paper.
+   Longhand properties (not the `background` shorthand) so this only ADDS to the
+   base rule above rather than resetting background-color too. */
+.page__content--blank {
+	background-image: url('../img/pattern.png');
+	background-repeat: repeat;
+	background-position: top left;
+	background-size: var(--sketchbook-blank-pattern-size) var(--sketchbook-blank-pattern-size);
+}
+
 /* Illustration band — cropped to the art's ~318px blush panel (all six share it),
    so every page's text starts at the same height. The leftover white strip below
    the panel varies per file and is cropped off; the card body is white anyway. */

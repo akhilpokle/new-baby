@@ -203,6 +203,11 @@
 
 	/* Framing — white paper backdrop masks mid-flip spine gaps; soft even shadow. */
 	--sketchbook-paper-bg:      #ffffff;
+
+	/* Blank back face (odd page count leaves one leaf's back empty — see
+	   letterPages()/buildBook() in app.js). Tiled from the top-left corner rather
+	   than bare white paper. */
+	--sketchbook-blank-pattern-size: 52px;
 	--sketchbook-card-shadow:   rgba(0, 0, 0, 0.10);   /* #000 @ 10%, 4px blur; x-offset set per side in styles.css */
 
 	/* Leaf edge — thin strip at each flipping leaf's outer border, giving the page

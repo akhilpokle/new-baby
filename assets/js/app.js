@@ -584,8 +584,8 @@ function renderEnd() {
 
 // Every page's content sits in a FIXED page-w × page-h box that applyScene scales
 // to its slot. Scaling (not resizing) is what stops the text re-wrapping mid-flip.
-const pageContent = (side, inner) =>
-  `<div class="page__content page__content--${side}" data-page-content>${inner}</div>`;
+const pageContent = (side, inner, extraClass = '') =>
+  `<div class="page__content page__content--${side}${extraClass ? ' ' + extraClass : ''}" data-page-content>${inner}</div>`;
 
 function buildBook(letter) {
   const pages     = letterPages(letter);
@@ -604,9 +604,11 @@ function buildBook(letter) {
     const leaf = document.createElement('div');
     leaf.className    = 'leaf';
     leaf.dataset.leaf = j;
+    // Blank back face (odd page count) gets the tiled pattern instead of bare
+    // white paper — otherwise it's an empty page with no visual reason to exist.
     leaf.innerHTML =
       `<div class="leaf__face leaf__face--front">${pageContent('right', pages[2 * j].html)}</div>` +
-      `<div class="leaf__face leaf__face--back">${pageContent('left', back ? back.html : '')}</div>` +
+      `<div class="leaf__face leaf__face--back">${pageContent('left', back ? back.html : '', back ? '' : 'page__content--blank')}</div>` +
       `<div class="leaf__edge" aria-hidden="true"></div>`;
     frag.appendChild(leaf);
     leaves.push(leaf);

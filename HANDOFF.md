@@ -130,6 +130,12 @@ page facing the closing card, which is what a real book does. This is why Male/P
 and Female/Direct (odd section counts) lost their blank page and Female/Perm and
 Male/Direct (even section counts) gained one, once the TLDR page shifted parity.
 
+That blank face gets `assets/img/pattern.png` (`.page__content--blank`) tiled from
+the top-left corner at `--sketchbook-blank-pattern-size` (52px) instead of bare
+white paper. `buildBook()` applies the class only when `back` is `undefined` —
+real content never gets it, verified by checking every non-empty back face lacks
+the class, not just that the blank one has it.
+
 **TLDR content is hand-authored, one item per section, same order as the book** — it
 doubles as a table of contents, and its `footer` line points the reader at the pages
 that follow. No links (the sections are one page-turn away) and no illustration: the
