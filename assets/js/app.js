@@ -430,15 +430,27 @@ const LINK_BUTTON_MAX_CHARS = 30;
 // links work; the source JSON should be corrected too.
 const normaliseUrl = (url) => (/^[a-z]+:\/\//i.test(url) ? url : 'https://' + url);
 
+// Trailing arrow icon — real SVG, not the CSS corner-border chevron the sketchbook
+// nav arrows use. Unresized/uncoloured (ships as #59656D), same "use the asset as
+// given" precedent as .page-jump__arrow's PNG.
+const ARROW_ICON = '<img class="link-icon" src="assets/img/arrow-right_16.svg" alt="" width="16" height="16">';
+
 // One link. Only some entries carry a real URL; the rest name a CMS template that
 // resolves at Liferay time, so they render inert rather than as a dead link.
 // TODO(api): give the linkText / label-only entries real destinations.
-function renderLink(link) {
+//
+// `showLinkIcon` only affects `.page-link` (long-label text links) — `.page-btn`
+// always gets the icon. Currently true only for the Medical Protection section,
+// matched by HEADING TEXT from renderSection() below: there is no stable section
+// id in the content, so — same caveat as the illustration map in content.js —
+// reword that heading and this silently stops applying.
+function renderLink(link, showLinkIcon) {
   const cls = link.label.length <= LINK_BUTTON_MAX_CHARS ? 'page-btn' : 'page-link';
+  const icon = (cls === 'page-btn' || showLinkIcon) ? ARROW_ICON : '';
   if (link.url) {
-    return `<a class="${cls}" href="${escHtml(normaliseUrl(link.url))}" target="_blank" rel="noopener">${escHtml(link.label)}</a>`;
+    return `<a class="${cls}" href="${escHtml(normaliseUrl(link.url))}" target="_blank" rel="noopener">${escHtml(link.label)}${icon}</a>`;
   }
-  return `<span class="${cls} ${cls}--unresolved" data-cms-ref="${escHtml(link.linkText || '')}">${escHtml(link.label)}</span>`;
+  return `<span class="${cls} ${cls}--unresolved" data-cms-ref="${escHtml(link.linkText || '')}">${escHtml(link.label)}${icon}</span>`;
 }
 
 // A benefit page: illustration band + heading + body + optional bullets/note + links.
@@ -454,7 +466,8 @@ function renderSection(section) {
     ? `<ul class="page-coverage">${section.coverage.map((c) => `<li>${escHtml(c)}</li>`).join('')}</ul>`
     : '';
   const note  = section.note ? `<p class="page-text">${escHtml(section.note)}</p>` : '';
-  const links = (section.links || []).map(renderLink).join('');
+  const showLinkIcon = section.heading === 'Medical Protection for your newborn';
+  const links = (section.links || []).map((l) => renderLink(l, showLinkIcon)).join('');
   return `${art}<div class="page-body">
       <h3 class="page-heading">${escHtml(section.heading)}</h3>
       <p class="page-text">${escHtml(section.body)}</p>
@@ -484,7 +497,7 @@ function renderTldr(tldr) {
         <span class="page-jump__num">${i + 1}</span>
         <span class="page-jump__body">
           <span class="page-jump__text">${escHtml(item.label)}: ${escHtml(item.text)}</span>
-          <img class="page-jump__arrow" src="assets/img/arrow-right_16.png" alt="" width="16" height="16">
+          <img class="page-jump__arrow" src="assets/img/arrow-right_16.svg" alt="" width="16" height="16">
         </span>
       </button>`
   ).join('');
@@ -543,13 +556,12 @@ function initTldrHighlight(pageEl) {
 }
 
 // The letter page: branded hero (Congratulations lockup is baked into the art,
-// hence the descriptive alt) + greeting + intro.
-// `--letter` darkens the copy (see styles.css): the letter is the one page that is
-// a personal message rather than reference material, so it reads at full contrast
-// instead of the muted grey the section pages use.
+// hence the descriptive alt) + greeting + intro. Same #455057 body colour as
+// every other page — it previously read at full contrast (--letter modifier,
+// now removed) as a deliberate exception; reverted on request.
 function renderLetter(letter) {
   return `<img class="page-illo" src="assets/img/baby_img.jpg" alt="Congratulations on the arrival of your little bundle of joy.">
-    <div class="page-body page-body--letter">
+    <div class="page-body">
       <p class="page-text">${escHtml(letter.greeting)}</p>
       <p class="page-text">${escHtml(letter.intro)}</p>
     </div>`;

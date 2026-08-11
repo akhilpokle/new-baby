@@ -86,7 +86,7 @@ mirror it.** Both are replaced by CMS-rendered content at Liferay handoff.
 
 | Renderer | Used for | Content |
 |---|---|---|
-| `renderLetter()` | letter page | `baby_img.jpg` hero + greeting + intro, at full text contrast (`.page-body--letter`) |
+| `renderLetter()` | letter page | `baby_img.jpg` hero + greeting + intro, same `#455057` body colour as every other page (was full-contrast `#1a1a1a` via a `--letter` modifier; removed on request) |
 | `renderTldr()` | TLDR page | heading + lead, then each item as a heading + paragraph, then the `footer` line. No illustration |
 | `renderSection()` | each section | illustration + heading + body + `coverage[]` as paragraphs + optional `note` + `links[]` |
 | `renderEnd()` | closing page | centred sign-off from `window.NEWBORN_CLOSING` — **placeholder copy** |
@@ -106,17 +106,21 @@ them), so `.page-body` sets no `gap` and spacing comes from `* + *` margins.
 `.page-body > * + *` is a single class, so a later equal-specificity `margin` on
 `.page-text` silently flattens the default to 0. That exact bug happened once.
 
-### Two text formats only
-Every page uses exactly two: **`.page-heading`** (14px semibold, full contrast — page
-headings *and* TLDR item labels) and **`.page-text`** (13px, muted — body copy,
-claim-coverage lines, notes, sign-offs). No italics, no list markers, no third size;
-`coverage[]` renders as paragraphs rather than a `<ul>`. Buttons and real links are
-controls, not a text format, and keep their own styling.
+### Two text formats, plus one documented exception
+Nearly every page uses exactly two: **`.page-heading`** (14px semibold, full
+contrast — page headings *and* TLDR item labels) and **`.page-text`** (14px,
+`#455057` — body copy, notes, sign-offs). No italics, no third size. Buttons and
+links are controls, not a text format, and keep their own styling.
+**Exception:** claims-page `coverage[]` is a bulleted `.page-coverage` list — put
+back on request after this rule shipped (see `styles.css` for why it's still
+"two formats" in spirit: same size/colour as `.page-text`, only the marker differs).
 
-⚠️ **Unresolved links no longer look unresolved.** They used to carry a dotted
-underline marking "no destination yet"; that was a third format and went with this
-change. The 7 links still needing URLs are listed below — that table is now the only
-record, since the UI no longer shows it.
+⚠️ **Unresolved links are now visually IDENTICAL to resolved ones** — 14px,
+underlined, `#455057`, hovers to `#303c44`. They used to carry a dotted underline,
+then a muted colour, marking "no destination yet"; both cues are gone now, by
+request. The only remaining difference is `cursor: default` (still genuinely not
+clickable). **The 7 links still needing URLs are listed below — that table is now
+the ONLY record; the UI gives no visual hint anymore.**
 
 `letterPages(letter)` builds one flat array — the TLDR (if the template has one)
 followed by the sections — so `buildBook()` never has to know a TLDR exists; it just
@@ -334,9 +338,10 @@ the next edit. Measured (not computed) at a 640px-tall viewport: the full assemb
 | `Update your dependant's details…`, `More info on medical benefits here`, `Access iOK here` | ❌ name a CMS template (`linkText`), no URL |
 | `Parental Benefits`, `Flexible Work Arrangements`, `Family Deals`, `Nursing Rooms: …` | ❌ label only, no destination |
 
-Unresolved links render inert but **look identical to resolved ones** now that the
-dotted-underline cue is gone (see "Two text formats only" above). They need real
-URLs, or confirmation that Liferay resolves the `linkText` template references.
+Unresolved links render inert but **look identical to resolved ones** — no dotted
+underline, no muted colour, nothing (see "Two text formats, plus one documented
+exception" above). They need real URLs, or confirmation that Liferay resolves the
+`linkText` template references.
 
 ### Button vs text link is a placeholder rule
 `links[]` mixes actions (`Submit Claim`) with prose (`Update your dependant's details

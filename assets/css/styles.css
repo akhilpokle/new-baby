@@ -574,10 +574,6 @@ body {
 /* An action sits further off whatever content precedes it. */
 .page-body > * + .page-btn { margin-top: var(--sketchbook-gap-content-action); }
 
-/* The letter is a personal message, not reference material, so it reads at full
-   contrast — every other page keeps the muted grey. */
-.page-body--letter .page-text { color: var(--color-text); }
-
 /* The closing page carries only a sign-off, so it would otherwise sit in the top
    third with ~260px of blank paper under it. Centring it in the leftover space
    reads as a deliberate bookend rather than a page that failed to fill. */
@@ -664,7 +660,7 @@ body {
 }
 .page-jump__num { flex-shrink: 0; width: var(--sketchbook-jump-num-w); }
 
-/* Arrow icon (assets/img/arrow-right_16.png), 16×16 native — no CSS recolouring,
+/* Arrow icon (assets/img/arrow-right_16.svg), 16×16 native — no CSS recolouring,
    so it reads at whatever grey the asset ships with. margin-top centres it on the
    FIRST line of a wrapping row (21px line-height), not the whole text block. */
 .page-jump__arrow {
@@ -683,12 +679,21 @@ body {
    indistinguishable from body copy on screen — the list of which links still need
    destinations lives in HANDOFF.md, not in the UI. */
 .page-link {
-	font-size: 13px;
+	font-size: var(--font-size-sm);
 	line-height: var(--line-height-snug);
-	color: var(--color-text);
+	color: var(--color-text-secondary);
 	text-decoration: underline;
 }
-.page-link--unresolved { color: var(--color-text-muted); text-decoration: none; cursor: default; }
+.page-link:hover { color: var(--color-text-secondary-hover); }
+/* The global reset (top of file) sets `img { display: block; }` — override back to
+   inline-block so the icon sits in the text flow instead of forcing a line break. */
+.link-icon { display: inline-block; vertical-align: -3px; margin-left: var(--space-1); }
+/* Styled identically to a resolved .page-link on request — the dotted-underline
+   "no destination yet" cue was already dropped earlier; this drops the muted
+   colour too, so the only remaining difference is `cursor: default` (it's still
+   genuinely not clickable). The list of which links still need real URLs lives in
+   HANDOFF.md, not in the UI. */
+.page-link--unresolved { cursor: default; }
 
 .page-btn {
 	height: var(--space-6);
@@ -696,6 +701,7 @@ body {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
+	gap: var(--space-1);
 	font-size: var(--font-size-sm);
 	line-height: var(--line-height-tight);
 	padding: 0 var(--space-3);
@@ -706,6 +712,9 @@ body {
 	text-decoration: none;
 	white-space: nowrap;
 }
+/* Single-line label (nowrap above), so unlike .page-link this can safely be a flex
+   item — no wrap point for it to misbehave at. */
+.page-btn .link-icon { flex-shrink: 0; }
 .page-btn:hover { background: var(--semantic-color-fill-hover); }
 .page-btn--unresolved { cursor: default; }
 
@@ -738,30 +747,22 @@ body {
 	height: var(--sketchbook-arrow-size);
 	border-radius: 50%;
 	border: none;
-	background: #ffffff;
+	background-color: #ffffff;
+	background-image: url('../img/arrow-right_16.svg');
+	background-repeat: no-repeat;
+	background-position: center;
 	box-shadow: 0 4px 14px rgba(23, 39, 51, 0.20);
 	cursor: pointer;
 	z-index: 70;
-	transition: background 0.15s, box-shadow 0.15s, opacity 0.15s;
+	transition: background-color 0.15s, box-shadow 0.15s, opacity 0.15s;
 }
-.sketchbook__arrow--prev { left: calc(var(--sketchbook-content-left) - var(--sketchbook-arrow-gap) - var(--sketchbook-arrow-size)); }
+.sketchbook__arrow--prev {
+	left: calc(var(--sketchbook-content-left) - var(--sketchbook-arrow-gap) - var(--sketchbook-arrow-size));
+	transform: translateY(-50%) scaleX(-1);   /* icon points right; flip the whole (symmetric) circle for prev */
+}
 .sketchbook__arrow--next { left: calc(var(--sketchbook-content-right) + var(--sketchbook-arrow-gap)); }
-.sketchbook__arrow:hover { background: #f4f4f4; box-shadow: 0 6px 18px rgba(23, 39, 51, 0.26); }
+.sketchbook__arrow:hover { background-color: #f4f4f4; box-shadow: 0 6px 18px rgba(23, 39, 51, 0.26); }
 .sketchbook__arrow:disabled { opacity: 0.35; cursor: default; box-shadow: none; }
-
-/* Chevron drawn from a rotated corner border. */
-.sketchbook__arrow::before {
-	content: '';
-	position: absolute;
-	top: 50%;
-	left: 50%;
-	width: 10px;
-	height: 10px;
-	border-top: 2px solid #172733;
-	border-right: 2px solid #172733;
-}
-.sketchbook__arrow--prev::before { transform: translate(-30%, -50%) rotate(-135deg); }
-.sketchbook__arrow--next::before { transform: translate(-70%, -50%) rotate(45deg); }
 
 /* ── Chrome row: persistent nav hint + feedback ────────────────────────────
    One line under the book. Hint left, feedback right — spending HORIZONTAL space
