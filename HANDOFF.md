@@ -357,13 +357,19 @@ Current rule: label ≤ 30 chars → button, longer → inline text link
 fix.**
 
 ### Content questions for the content team
-- **Closing page copy is PROTOTYPE-WRITTEN, not theirs.** The page is now real HTML
-  (`window.NEWBORN_CLOSING`), replacing `card-end.png` — whose copy duplicated
-  "Discover other benefits" verbatim and whose 👍/👎 control was part of the image and
-  never clicked. Needs their words, and a decision on whether the feedback control
-  comes back as a working element (`TODO(api)` in `content.js`).
-- **TLDR page copy is also prototype-written** — one summary line per section, plus
-  the "flip through the pages" footer. Needs their review for tone and accuracy.
+- **Closing page copy is Akhil-provided, not Claude-placeholder and not the content
+  team's yet.** The page is real HTML (`window.NEWBORN_CLOSING`), replacing
+  `card-end.png` — whose copy duplicated "Discover other benefits" verbatim and
+  whose 👍/👎 control was part of the image and never clicked. Current copy points
+  readers to the Intranet's "Employee services" section. One shared block (not
+  per-persona), so this already applies to all four audiences. Still needs a
+  content-team pass, and a decision on whether the feedback control in the chrome
+  row is the intended replacement for the old 👍/👎 (`TODO(api)` in `app.js`).
+- **TLDR page copy is mostly Claude-authored placeholder, with two exceptions on
+  Female/Permanent** — items 2 ("Medical Benefits") and 5 ("Other benefits") are
+  Akhil-provided; the rest (that persona and all of Male/Perm, Male/Direct,
+  Female/Direct) are still placeholder pending a content-team pass. The "flip
+  through the pages" footer is also still placeholder.
 - **`Staff Deals`** (Male/Perm) vs **`Family Deals`** (other three) — same link,
   different label. Intentional?
 - **Male/Perm intro omits "As you return to work,"** which the other three have.
@@ -418,9 +424,13 @@ the card scales smoothly rather than snapping; open/close snaps with no animatio
 
 ## 7. Git state
 
-- Last pushed commit: **`c19e603`** — *"Add clickable summary jump rows, wheel nav,
-  and persistent feedback"*. Everything through the jump rows, wheel-to-flip,
-  restored cursor and chrome row is committed and on `origin/main`.
-- **Uncommitted:** `--sketchbook-page-pad` changed from uniform `16px` to
-  `16px 24px`, and the resulting `--sketchbook-page-h` bump (490 → 511) to
-  absorb it. Modified: `tokens.css`, `HANDOFF.md`.
+- Last pushed commit: **`0f9005f`** — *"Fill the blank leaf back with a tiled
+  pattern"*. Everything through the page-padding widen, claims-page bullets,
+  link/button restyle + SVG icons, and the blank-page pattern fill is committed
+  and on `origin/main`.
+- **Uncommitted:** two content edits, both Akhil-provided (not placeholder) — see
+  "Content questions for the content team" below. Closing copy now points to the
+  Intranet's "Employee services" section (shared block, applies to all four
+  personas). Female/Permanent's TLDR items 2 and 5 get real copy ("Medical
+  Benefits", "Other benefits"). Modified: `newborn_mtm_templates.json`,
+  `content.js`, `HANDOFF.md`.

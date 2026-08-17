@@ -176,10 +176,10 @@ window.NEWBORN_CONTENT = {
 				lead: "Here's an overview of all the benefits waiting for you.",
 				items: [
 					{ label: 'Time off', text: 'Maternity, shared parental and enhanced childcare leave.' },
-					{ label: 'Medical cover', text: 'Core medical plan for your newborn, with the option to upgrade.' },
+					{ label: 'Medical Benefits', text: 'Enrol your newborn under our medical plans.' },
 					{ label: 'Maternity claims', text: 'S$5,000 per newborn towards pre-natal, delivery and early care.' },
 					{ label: 'Nursing rooms', text: "Private spaces for when you're back in the office." },
-					{ label: 'Other benefits', text: 'Flexible work, family deals and the wider parental line-up.' },
+					{ label: 'Other benefits', text: 'Flexible work, family deals and more.' },
 					{ label: 'Wellbeing support', text: 'iOK, whenever you want to talk something through.' },
 				],
 				footer: 'Flip through the pages to see each one in detail.',
@@ -339,8 +339,7 @@ window.NEWBORN_CONTENT = {
 window.NEWBORN_CLOSING = {
 	heading: "That's everything for now",
 	body: [
-		'We hope this makes the months ahead a little lighter. Everything in here stays in the benefits portal, so you can come back to it whenever you need to.',
-		'Congratulations again — from all of us at DBS.',
+		'We hope these benefits and resources can help make the months ahead a little lighter. All your benefits and other helpful resources are available on the Intranet, under "Employee services".',
 	],
 };
 
