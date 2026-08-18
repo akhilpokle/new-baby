@@ -136,6 +136,12 @@ Depth at scene `i`, with `n` leaves (scenes run `0…n`):
 | leaf `j`, upcoming (`j >= i`) | `j − i` |
 | closing page (`end`) | `n − i` |
 
+`end`'s **position** is always derived this way regardless of content — but its
+**content** is conditional: the thank-you page when the content stream has an even
+page count, or a decorative pattern page when odd (the thank-you then lands on the
+spare leaf-back face instead). See `buildBook()`'s `needsPattern` in `app.js` and
+HANDOFF.md §2. Geometry is unaffected either way — leaf/spread counts don't change.
+
 Two leaves are always at depth 0 — `i−1` (turned, showing its back) and `i`
 (upcoming, showing its front). Those are the two pages of the current spread, and
 `slotAt().d === 0` is what drives **reachability**: everything else is `inert`.
@@ -169,7 +175,7 @@ dbs-new-baby/
 │       ├── FLIGHT.png      — stork sprite frame 0 (idle / start)
 │       ├── FLIGHT-1.png … FLIGHT-5.png   — sprite frames 1–5
 │       ├── cursor-arrow.png              — right-pointing PNG arrow, 32 × 32 display
-│       ├── baby_img.jpg                  — letter page hero (Congratulations lockup)
+│       ├── banner.png                    — letter page hero (Congratulations lockup)
 │       ├── more-time.jpg … care-and-support.jpg  — 6 section illustrations, 720px wide
 │       └── card-*.png                    — ORIGINAL card art; ONLY used by variations/ now
 │                                            (the closing page is HTML — see renderEnd())

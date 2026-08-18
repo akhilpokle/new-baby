@@ -1,5 +1,9 @@
-/* Design tokens — swap these for DLS variables during Liferay handoff */
-:root {
+/* Design tokens — swap these for DLS variables during Liferay handoff.
+   Scoped to .wb_root, not :root — a bare :root would leak into (and could
+   collide with) the host Liferay theme's own custom properties. app.js reads
+   these via getComputedStyle(rootEl), not document.documentElement — see
+   LIFERAY-CONVERSION-PLAYBOOK.md §1. */
+.wb_root {
 
 	/* Colors */
 	--color-bg:           #f5f5f5;
@@ -166,7 +170,15 @@
 	   costs ~33px of vertical space instead of ~122px stacked (which overflows a
 	   1366×768 laptop and, once the backdrop scrolls, disables scroll-to-flip).
 	   Text sits on the dark blurred backdrop, hence the light colour. */
-	--sketchbook-chrome-gap:    12px;   /* book → chrome */
+	/* Book → chrome row. This is the hint line's effective margin-top; set it
+	   here rather than on .wb_sketchbook__hint, which is a flex item beside the
+	   feedback control — a margin there would drop the hint out of line with
+	   the 👍/👎 buttons. Costs vertical budget: at 20px the assembly is 555px
+	   and the backdrop starts scrolling below a ~642px viewport (was ~630px at
+	   12px). Nothing is hidden either way — the backdrop is overflow-y:auto —
+	   but once it scrolls, scroll-to-flip defers to native scrolling (see the
+	   wheel notes in HANDOFF.md §3). */
+	--sketchbook-chrome-gap:    20px;   /* book → chrome */
 	--sketchbook-chrome-text:   #DCE4EA;
 	--sketchbook-chrome-hover:  rgba(255, 255, 255, 0.14);
 

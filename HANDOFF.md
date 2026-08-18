@@ -25,6 +25,17 @@ A fanned deck: a **letter page** (left base) and a **closing page** (right base)
 left-side slivers, every turned page landing flush at the spine. One leaf turns at a
 time. Opens on spread 1.
 
+That's the **even**-content-page case (closing is `end`, no pattern). An **odd**
+content-page count instead ends:
+
+```
+… | s3    s4 | s5    closing | pattern
+  |  leaf 2  |    leaf 3     |  end
+```
+
+— the closing page fills the spare leaf-back face and `end` becomes an optional
+**pattern** page (see §2, "Order is content → thank-you → pattern").
+
 Right after the letter comes a **TLDR page** — a contents-page summary, one line per
 section that follows, in the same order it appears in the book. It is just another
 page as far as the fan geometry is concerned (see `letterPages()` in `app.js`): the
@@ -86,7 +97,7 @@ mirror it.** Both are replaced by CMS-rendered content at Liferay handoff.
 
 | Renderer | Used for | Content |
 |---|---|---|
-| `renderLetter()` | letter page | `baby_img.jpg` hero + greeting + intro, same `#455057` body colour as every other page (was full-contrast `#1a1a1a` via a `--letter` modifier; removed on request) |
+| `renderLetter()` | letter page | `banner.png` hero + greeting + intro, same `#455057` body colour as every other page (was full-contrast `#1a1a1a` via a `--letter` modifier; removed on request) |
 | `renderTldr()` | TLDR page | heading + lead, then each item as a heading + paragraph, then the `footer` line. No illustration |
 | `renderSection()` | each section | illustration + heading + body + `coverage[]` as paragraphs + optional `note` + `links[]` |
 | `renderEnd()` | closing page | centred sign-off from `window.NEWBORN_CLOSING` — **placeholder copy** |
@@ -125,16 +136,28 @@ the ONLY record; the UI gives no visual hint anymore.**
 `letterPages(letter)` builds one flat array — the TLDR (if the template has one)
 followed by the sections — so `buildBook()` never has to know a TLDR exists; it just
 maps **leaf `j` → `pages[2j]` on the front (right page), `pages[2j+1]` on the back
-(left page)**. An odd page count leaves the final back face **blank** — a blank left
-page facing the closing card, which is what a real book does. This is why Male/Perm
-and Female/Direct (odd section counts) lost their blank page and Female/Perm and
-Male/Direct (even section counts) gained one, once the TLDR page shifted parity.
+(left page)**.
 
-That blank face gets `assets/img/pattern.png` (`.page__content--blank`) tiled from
-the top-left corner at `--sketchbook-blank-pattern-size` (52px) instead of bare
-white paper. `buildBook()` applies the class only when `back` is `undefined` —
-real content never gets it, verified by checking every non-empty back face lacks
-the class, not just that the blank one has it.
+**Order is content → thank-you → pattern, and the pattern is optional.** The
+thank-you page (`renderEnd()`, from `window.NEWBORN_CLOSING`) always follows the
+content, but *where* it lands depends on the content stream's parity:
+
+- **Odd content-page count** (Male/Direct, Female/Perm) — there's one leaf-back
+  face left over after the content. `buildBook()` appends the thank-you onto the
+  stream so it fills that face, and the true final page (`end`) becomes the
+  **pattern** — `assets/img/pattern.png` (`.page__content--blank`), tiled from the
+  top-left at `--sketchbook-blank-pattern-size` (52px), the same treatment the old
+  blank leaf-back face used.
+- **Even content-page count** (Male/Perm, Female/Direct) — no face is left over,
+  so `end` stays the thank-you and **no pattern page appears at all**. This is the
+  "optional" case — the pattern isn't hidden or skipped, it's never created.
+
+`needsPattern = pages.length % 2 === 1` is the single flag driving this; it also
+tells `buildCaptions()` to omit a caption for the final right page when it's the
+(decorative) pattern rather than the thank-you. This is why Male/Perm and
+Female/Direct (odd section counts) lost their blank page and Female/Perm and
+Male/Direct (even section counts) gained one, once the TLDR page shifted parity —
+the parity math is unchanged, only what fills each slot changed.
 
 **TLDR content is hand-authored, one item per section, same order as the book** — it
 doubles as a table of contents, and its `footer` line points the reader at the pages
@@ -280,7 +303,8 @@ the chrome and *not* on a page because pages have ~8px of height slack (gotchas
 | `index.html` | Book **shell only** — pages are injected, not authored |
 | `assets/css/styles.css` | `.sketchbook*`, `.leaf*`, `.page*`, `.page__content`, link styles |
 | `assets/css/tokens.css` | Sketchbook token block |
-| `assets/img/baby_img.jpg` | **Letter page hero** — in use, do not remove |
+| `assets/img/banner.png` | **Letter page hero** — 800×354 (ratio 0.4425 ≈ `--sketchbook-illo-ratio`), in use, do not remove |
+| `assets/img/baby_img.jpg` | Previous letter hero — **orphaned**, nothing references it since the `banner.png` swap |
 | `assets/img/more-time.jpg` … `care-and-support.jpg` | 6 section illustrations, 720px wide |
 | `assets/img/card-*.png` | Original card art — **only used by `variations/`** now; the live closing page is HTML, not `card-end.png` |
 
@@ -397,28 +421,34 @@ is why `content.js` exists.
 loader never clears, animations don't run, and screenshots stall. Environment quirk,
 not a bug (gotchas #15).
 
-Fast path to the book without flying the stork:
+Fast path to the book without flying the stork — go through the public API, not
+the CSS class directly: since the Liferay conversion, `[data-backdrop]` also
+carries `inert`, which the class alone doesn't clear, so the dialog would open
+visually but stay untabbable.
 
 ```js
-document.querySelector('[data-backdrop]').classList.add('is-visible');
+window.WelcomeBabyExperience.open();
 // then use the arrows, ← / →, or:
-document.querySelector('.sketchbook__arrow--next').click();
+document.querySelector('.wb_sketchbook__arrow--next').click();
+// window.WelcomeBabyExperience.close() / .isOpen() / .destroy() are also available.
 ```
 
-**Check all four personas** — they exercise different leaf counts and the odd-count
-blank page:
+**Check all four personas** — they exercise different leaf counts and the
+optional pattern page (see §2, "Order is content → thank-you → pattern"):
 
 ```
-?gender=Female&type=Permanent%20Staff   6 sections / 3 leaves
-?gender=Female&type=Direct%20Contract   5 sections / 3 leaves + blank
-?gender=Male&type=Permanent%20Staff     5 sections / 3 leaves + blank
-?gender=Male&type=Direct%20Contract     4 sections / 2 leaves
+?gender=Female&type=Permanent%20Staff   6 sections, 7 content pages (odd) → 4 leaves + pattern
+?gender=Male&type=Direct%20Contract     4 sections, 5 content pages (odd) → 3 leaves + pattern
+?gender=Male&type=Permanent%20Staff     5 sections, 6 content pages (even) → 3 leaves, no pattern
+?gender=Female&type=Direct%20Contract   5 sections, 6 content pages (even) → 3 leaves, no pattern
 ```
 
 Worth re-checking after any layout change: no horizontal overflow at **1024px** (the
 book does **not** scale with the stage — gotchas #17); text doesn't re-wrap mid-flip;
 the card scales smoothly rather than snapping; open/close snaps with no animation;
-`Tab` only reaches links on the visible spread.
+`Tab` only reaches focusable elements inside the open dialog (the focus trap in
+`onDocumentKeydown()`/`getFocusable()`, app.js) and wraps at both ends; `Esc` closes;
+focus returns to whatever had it before `open()` was called.
 
 ---
 
