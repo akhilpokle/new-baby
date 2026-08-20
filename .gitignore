@@ -3,5 +3,9 @@
 Thumbs.db
 .DS_Store
 
-# Packaged prototype build — regenerated on demand, not source
+# Packaged builds — regenerated on demand, not source. The handoff zip is just
+# final/ compressed, and final/ IS tracked, so committing the zip would version
+# the same bytes twice. Rebuild with:
+#   node scripts/build-final.mjs   (then zip final/)
 welcome-baby-prototype.zip
+welcome-baby-liferay-handoff.zip

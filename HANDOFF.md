@@ -402,11 +402,18 @@ fix.**
 - `"Access iOK here."` appears both at the end of `body` and as the link label.
 
 ### Housekeeping
-- `welcome-baby-prototype.zip` — untracked build artifact, still **not** in
-  `.gitignore`.
-- `variations/variation-1.html` / `-2.html` still reference `card-1…6.png`. Those
-  PNGs are otherwise unused by the live book — don't delete them without pruning
-  `variations/` too.
+- Build artifacts (`welcome-baby-prototype.zip`, `welcome-baby-liferay-handoff.zip`)
+  are now in `.gitignore`. The handoff zip is just `final/` compressed, and
+  `final/` is tracked, so the zip is regenerated on demand rather than committed.
+- ⚠️ **`variations/variation-1.html` / `-2.html` are BROKEN.** They reference
+  `card-1…6.png` / `card-open.png` / `card-end.png`, which were deleted when the
+  section illustrations were replaced. The live book never used them (only
+  comments in `app.js` / `content.js` still name `card-end.png`), so nothing
+  shipping is affected — but those two exploration files now render with missing
+  images. Either restore the PNGs from git history (`git show <rev>:assets/img/card-1.png`)
+  or delete `variations/` outright; leaving them half-broken is the worst option.
+- `assets/img/baby_img.jpg` (the pre-`banner.png` letter hero) was deleted in the
+  same pass. Nothing references it — this one is a clean removal.
 
 ---
 

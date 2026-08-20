@@ -389,6 +389,7 @@
 		top: -91px;
 	}
 
+
 	/* ─── Door indicator pulse ────────────────────────────────────────────────── */
 	/* Targets id="indicator" — the pink rect element inlined in scene.svg.
 	   Lives inside the SVG so it automatically scales/pans with the scene.
@@ -401,10 +402,17 @@
 	}
 
 	/* ─── Sparkle trail ───────────────────────────────────────────────────────── */
+	/* z-index above EVERYTHING (loader 10000, intro-overlay 9999, close-btn
+	   10001) — sparkles now emit from the very first frame (see loop() in
+	   app.js), including while the opaque loader/splash are on screen, so
+	   they have to paint above those or they'd be invisible underneath. Safe
+	   above close-btn too: pointer-events:none, and emission already stops at
+	   delivery, before the close button is ever visible (it's inert inside
+	   the not-yet-open backdrop until then). */
 	.wb_sparkle {
 		position: fixed;
 		pointer-events: none;
-		z-index: 9998;
+		z-index: 10002;
 		font-size: var(--sparkle-size);
 		line-height: 1;
 		animation: wb_sparkle-fade var(--sparkle-duration) ease-out forwards;
@@ -479,9 +487,11 @@
 		transition-duration: var(--intro-flydown-duration);
 	}
 
-	/* Splash content: text + button clear quickly; stork rises to the top; clouds sweep upward. */
+	/* Splash content: text + button + message clear quickly; stork rises to the
+	   top; clouds sweep upward. */
 	.wb_intro-overlay.wb_is-leaving .wb_intro-copy,
-	.wb_intro-overlay.wb_is-leaving .wb_intro-actions {
+	.wb_intro-overlay.wb_is-leaving .wb_intro-actions,
+	.wb_intro-overlay.wb_is-leaving .wb_intro-stork-message {
 		opacity: 0;
 		transition: opacity 0.3s ease;
 	}
@@ -513,8 +523,8 @@
 		overflow: hidden;
 	}
 
-	/* Stork, copy, and actions stack above the clouds. */
-	.wb_intro-stork,
+	/* Stork (now its wrap), copy, and actions stack above the clouds. */
+	.wb_intro-stork-wrap,
 	.wb_intro-copy,
 	.wb_intro-actions {
 		position: relative;
@@ -526,6 +536,29 @@
 		width: 227px;
 		height: 173px;
 		pointer-events: none;
+	}
+
+	/* Message bubble — intro screen only, replaces .wb_intro-copy (which is now
+	   wb_sr-only — same words are baked into this image). Static (the intro
+	   stork never moves or flips, just hovers cycling wing frames), so plain
+	   CSS positioning works; no JS tracking needed the way the stage stork's
+	   message would need. 390×187 is the source asset's own aspect ratio
+	   (748:1564), so it isn't stretched. Offset up-and-left of the sprite so
+	   the bubble's tail (baked into the art, bottom-right of the image) lands
+	   near the beak — FLIGHT.png faces left, so the head sits near the frame's
+	   top-left, not centred. Left: -340px needs ~340px of clearance either
+	   side of the (centred) stork; only tight at the 1024px floor (~398px
+	   available there) — re-check if the floor ever drops. Fades out with
+	   .wb_intro-actions on wb_is-leaving (see above) — gone as soon as the
+	   user commits to "Yes, guide them home," not lingering through fly-down. */
+	.wb_intro-stork-message {
+		position: absolute;
+		left: -340px;
+		top: -145px;
+		width: 390px;
+		height: 187px;
+		pointer-events: none;
+		transition: opacity 0.3s ease;
 	}
 
 	.wb_intro-copy {
@@ -822,13 +855,22 @@
 	.wb_page-heading + .wb_page-text { margin-top: var(--sketchbook-gap-heading-text); }
 	/* An action sits further off whatever content precedes it. */
 	.wb_page-body > * + .wb_page-btn { margin-top: var(--sketchbook-gap-content-action); }
+	/* Closing-page avatar sits further off the sign-off than the page default. */
+	.wb_page-closing-avatar + .wb_page-text { margin-top: var(--space-4); }
 
-	/* The closing page carries only a sign-off, so it would otherwise sit in the top
-	   third with ~260px of blank paper under it. Centring it in the leftover space
-	   reads as a deliberate bookend rather than a page that failed to fill. */
+	/* Top-aligned on request — was vertically centred (see git history for the old
+	   "deliberate bookend" rationale, from before the avatar filled more of the
+	   page). flex:1 kept even though centring no longer needs it: harmless with
+	   top alignment, and removing it isn't part of what was asked. */
 	.wb_page-body--closing {
 		flex: 1;
-		justify-content: center;
+		justify-content: flex-start;
+	}
+
+	.wb_page-closing-avatar {
+		width: 84px;
+		height: 84px;
+		flex-shrink: 0;
 	}
 
 	/* ── Summary-page jump rows ────────────────────────────────────────────────

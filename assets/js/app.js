@@ -603,9 +603,23 @@ function renderLetter(letter) {
 function renderEnd() {
   const closing = window.NEWBORN_CLOSING;
   if (!closing) return '';   // content.js missing — leave the page blank rather than error
-  const paras = closing.body.map((p) => `<p class="wb_page-text">${escHtml(p)}</p>`).join('');
+  // Heading removed from view on request — closing.heading still feeds the
+  // aria-live caption for this page (see closingPage in buildBook()), so
+  // screen-reader users still get "That's everything for now" announced.
+  // "Employee services" names an Intranet section with no confirmed URL —
+  // styled as an unresolved link (same convention as renderLink()'s
+  // linkText-only branch: identical to a resolved .wb_page-link, cursor:
+  // default is the only difference), applied on the escaped text since it's
+  // plain prose here, not a links[] entry.
+  const paras = closing.body.map((p) => {
+    const html = escHtml(p).replace(
+      'Employee services',
+      '<span class="wb_page-link wb_page-link--unresolved" data-cms-ref="Employee services">Employee services</span>'
+    );
+    return `<p class="wb_page-text">${html}</p>`;
+  }).join('');
   return `<div class="wb_page-body wb_page-body--closing">
-      <h3 class="wb_page-heading">${escHtml(closing.heading)}</h3>
+      <img class="wb_page-closing-avatar" src="assets/img/human-spot-staff-neutral-wave.png" alt="" width="84" height="84">
       ${paras}
     </div>`;
 }
@@ -1168,17 +1182,21 @@ function loop(now) {
   const dt = Math.min(now - lastTime, 50); // cap delta to avoid huge jumps on tab-switch
   lastTime = now;
 
-  // Intro gating: the splash freezes everything; the fly-down runs its own branch.
-  if (introState === 'splash')    { requestAnimationFrame(loop); return; }
-  if (introState === 'flying-in') { flyDown(now, dt); requestAnimationFrame(loop); return; }
-
   // — Sparkle emission — continuous, throttled to SPARKLE_INTERVAL ms —
   // Runs every frame at the last known cursor position so sparkles persist
-  // even when the cursor is stationary. Stops once the card is delivered.
+  // even when the cursor is stationary. Ahead of the intro-state gate below
+  // on purpose, so they start on the splash screen (and through fly-down),
+  // not only once guiding begins — see .wb_sparkle's z-index for why they're
+  // actually visible there (the splash overlay is opaque and used to sit
+  // above them). Stops once the card is delivered.
   if (!deliveryTriggered && now - lastSparkleTime > SPARKLE_INTERVAL) {
     createSparkle(cursorClientX, cursorClientY);
     lastSparkleTime = now;
   }
+
+  // Intro gating: the splash freezes everything ELSE; the fly-down runs its own branch.
+  if (introState === 'splash')    { requestAnimationFrame(loop); return; }
+  if (introState === 'flying-in') { flyDown(now, dt); requestAnimationFrame(loop); return; }
 
   // — Fly stork toward cursor at a CONSTANT speed (skipped once delivery is triggered) —
   // Straight-line path, fixed px/sec regardless of how far the cursor is, so a big

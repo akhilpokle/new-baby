@@ -339,7 +339,7 @@ window.NEWBORN_CONTENT = {
 window.NEWBORN_CLOSING = {
 	heading: "That's everything for now",
 	body: [
-		'We hope these benefits and resources can help make the months ahead a little lighter. All your benefits and other helpful resources are available on the Intranet, under "Employee services".',
+		'We hope these benefits and resources can help make the months ahead a little lighter. All your benefits and other helpful resources are available on the Intranet, under Employee services.',
 	],
 };
 

@@ -829,8 +829,6 @@
 				 src="assets/img/FLIGHT.png" alt="" />
 		</div>
 
-		<!-- Speech bubble — appears after 2 s of mouse inactivity; JS positions via transform -->
-
 	</div>
 
 	<!-- Delivery backdrop — full-screen scroll container with gradient + blur overlay.
@@ -928,8 +926,18 @@
 			<img class="wb_cloud" src="assets/img/cloud1.svg" alt="" style="--cloud-x:720px;  --cloud-y:120px; --cloud-w:120px; --cloud-delay:-2s">
 			<img class="wb_cloud" src="assets/img/cloud2.svg" alt="" style="--cloud-x:990px;  --cloud-y:135px; --cloud-w:98px;  --cloud-delay:-11s">
 		</div>
-		<img class="wb_intro-stork" data-intro-stork src="assets/img/FLIGHT.png" alt="" aria-hidden="true" />
-		<div class="wb_intro-copy">
+		<!-- Wrapper exists only so the message image can be positioned relative to
+		     the stork without tracking it via JS — the intro stork never moves or
+		     flips (it just hovers, cycling wing frames), unlike the stage stork. -->
+		<div class="wb_intro-stork-wrap">
+			<img class="wb_intro-stork" data-intro-stork src="assets/img/FLIGHT.png" alt="" aria-hidden="true" />
+			<img class="wb_intro-stork-message" src="assets/img/stork-message.png" alt="" aria-hidden="true" />
+		</div>
+		<!-- Visually hidden (wb_sr-only), not removed: the message is now carried
+		     by the stork-message.png bubble, which says the same thing baked into
+		     the image (decorative, alt=""). Screen-reader users still get the real
+		     text instead of nothing. -->
+		<div class="wb_intro-copy wb_sr-only">
 			<p class="wb_intro-headline">Someone special has arrived.</p>
 			<p class="wb_intro-subline">Move your cursor and help the stork find the front door.</p>
 		</div>
